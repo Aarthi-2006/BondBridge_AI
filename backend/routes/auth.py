@@ -1,4 +1,5 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, request, jsonify
+from database import get_connection
 
 auth = Blueprint("auth", __name__)
 
@@ -6,17 +7,62 @@ auth = Blueprint("auth", __name__)
 @auth.route("/login", methods=["POST"])
 def login():
 
-    data = request.json
+    try:
 
-    email = data.get("email")
-    password = data.get("password")
+        data = request.get_json()
 
-    if email == "admin@gmail.com" and password == "12345":
+        email = data.get("email")
+        password = data.get("password")
+
+        conn = get_connection()
+
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+            SELECT user_id, full_name, email, role
+            FROM users
+            WHERE email=%s AND password=%s
+        """
+
+        cursor.execute(query, (email, password))
+
+        user = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+
+        if user:
+
+            return jsonify({
+
+                "success": True,
+
+                "message": "Login successful",
+
+                "role": user["role"],
+
+                "user": user
+
+            })
+
+
         return jsonify({
-            "message": "Login successful",
-            "role": "admin"
-        })
 
-    return jsonify({
-        "message": "Invalid email or password"
-    }), 401
+            "success": False,
+
+            "message": "Invalid Email or Password"
+
+        }), 401
+
+
+
+    except Exception as e:
+
+        return jsonify({
+
+            "success": False,
+
+            "message": str(e)
+
+        }), 500
