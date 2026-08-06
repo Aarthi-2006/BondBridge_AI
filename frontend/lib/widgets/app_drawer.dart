@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../screens/login_screen.dart';
-import '../screens/student_dashboard.dart';
-import '../screens/teacher_dashboard.dart';
-import '../screens/parent_dashboard.dart';
+import '../screens/student_management/student_management_screen.dart';
+import '../screens/teacher_management/teacher_management_screen.dart';
+import '../screens/parent_management/parent_management_screen.dart';
 import '../screens/ai_reports_screen.dart';
 
 class AppDrawer extends StatelessWidget {
@@ -28,7 +28,7 @@ class AppDrawer extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const StudentDashboard(),
+                  builder: (_) => const StudentManagementScreen(),
                 ),
               );
             },
@@ -41,7 +41,7 @@ class AppDrawer extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const TeacherDashboard(),
+                  builder: (_) => const TeacherManagementScreen(),
                 ),
               );
             },
@@ -54,7 +54,7 @@ class AppDrawer extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const ParentDashboard(),
+                  builder: (_) => const ParentManagementScreen(),
                 ),
               );
             },

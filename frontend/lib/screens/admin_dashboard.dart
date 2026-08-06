@@ -6,7 +6,7 @@ import '../widgets/app_drawer.dart';
 
 import 'student_management/student_management_screen.dart';
 import 'teacher_management/teacher_management_screen.dart';
-import 'parent_dashboard.dart';
+import 'parent_management/parent_management_screen.dart';
 import 'ai_reports_screen.dart';
 
 
@@ -295,7 +295,7 @@ class AdminDashboard extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const ParentDashboard(),
+        builder: (_) => const ParentManagementScreen(),
       ),
     );
   },

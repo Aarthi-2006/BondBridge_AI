@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 
+
 class ApiService {
 
   // Emulator -> Flask
@@ -511,5 +512,224 @@ static Future<Map<String, dynamic>> deleteTeacher(
 }
  
 
+  // =====================================================
+// GET PARENTS
+// =====================================================
 
+static Future<Map<String, dynamic>> getParents({
+  String? className,
+  String? section,
+  String? search,
+}) async {
+
+  String url = "$baseUrl/parents";
+
+
+  List<String> params = [];
+
+
+  if (className != null && className.isNotEmpty) {
+    params.add("class=$className");
+  }
+
+
+  if (section != null && section.isNotEmpty) {
+    params.add("section=$section");
+  }
+
+
+  if (search != null && search.isNotEmpty) {
+    params.add("search=$search");
+  }
+
+
+  if (params.isNotEmpty) {
+
+    url = "$url?${params.join("&")}";
+
+  }
+
+
+
+  final response = await http.get(
+    Uri.parse(url),
+  );
+
+
+  if(response.statusCode == 200){
+
+    return jsonDecode(response.body);
+
+  }
+
+  else{
+
+    throw Exception(
+      "Failed to load parents"
+    );
+
+  }
+
+}
+
+
+
+// =====================================================
+// GET STUDENTS BY CLASS AND SECTION
+// =====================================================
+
+
+static Future<List<dynamic>> getParentStudents({
+
+required String className,
+
+required String section,
+
+}) async {
+
+
+String url =
+"$baseUrl/parent_students?class=$className&section=$section";
+
+
+
+final response = await http.get(
+Uri.parse(url)
+);
+
+
+
+if(response.statusCode==200){
+
+return jsonDecode(response.body);
+
+}
+
+
+else{
+
+throw Exception(
+"Failed to load students"
+);
+
+}
+
+
+}
+
+
+
+
+// =====================================================
+// ADD PARENT
+// =====================================================
+
+
+static Future<bool> addParent(
+Map<String,dynamic> data
+) async {
+
+
+final response = await http.post(
+
+Uri.parse(
+"$baseUrl/parents"
+),
+
+
+headers:{
+
+"Content-Type":
+"application/json"
+
+},
+
+
+body:
+jsonEncode(data)
+
+);
+
+
+
+return response.statusCode==200;
+
+
+
+}
+
+
+
+
+// =====================================================
+// UPDATE PARENT
+// =====================================================
+
+
+static Future<bool> updateParent(
+
+int parentId,
+
+Map<String,dynamic> data
+
+) async {
+
+
+final response = await http.put(
+
+Uri.parse(
+"$baseUrl/parents/$parentId"
+),
+
+
+headers:{
+
+"Content-Type":
+"application/json"
+
+},
+
+
+body:
+jsonEncode(data)
+
+);
+
+
+
+return response.statusCode==200;
+
+
+}
+
+
+
+
+// =====================================================
+// DELETE PARENT
+// =====================================================
+
+
+static Future<bool> deleteParent(
+
+int parentId
+
+) async {
+
+
+
+final response = await http.delete(
+
+Uri.parse(
+"$baseUrl/parents/$parentId"
+)
+
+);
+
+
+
+return response.statusCode==200;
+
+
+}
 }
