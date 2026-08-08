@@ -3,12 +3,11 @@ import 'package:flutter/material.dart';
 
 import '../widgets/dashboard_card.dart';
 import '../widgets/app_drawer.dart';
-
 import 'student_management/student_management_screen.dart';
 import 'teacher_management/teacher_management_screen.dart';
 import 'parent_management/parent_management_screen.dart';
-import 'ai_reports_screen.dart';
-
+import 'announcement_management/announcement_management_screen.dart';
+import 'login_screen.dart';
 
 class AdminDashboard extends StatelessWidget {
 
@@ -116,33 +115,37 @@ class AdminDashboard extends StatelessWidget {
 
                   PopupMenuButton<String>(
 
+  offset: const Offset(0, 45),
 
-                    offset: const Offset(0, 45),
+  onSelected: (value) {
 
+    if (value == "logout") {
 
-                    itemBuilder: (context) => const [
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const LoginScreen(),
+        ),
+        (route) => false,
+      );
 
+    }
 
-                      PopupMenuItem(
+  },
 
-                        value: "profile",
+  itemBuilder: (context) => const [
 
-                        child: Text("Profile"),
+    PopupMenuItem(
+      value: "profile",
+      child: Text("Profile"),
+    ),
 
-                      ),
+    PopupMenuItem(
+      value: "logout",
+      child: Text("Logout"),
+    ),
 
-
-
-                      PopupMenuItem(
-
-                        value: "logout",
-
-                        child: Text("Logout"),
-
-                      ),
-
-
-                    ],
+  ],
 
 
 
@@ -251,9 +254,9 @@ class AdminDashboard extends StatelessWidget {
             DashboardCard(
   title: "Students",
   icon: Icons.school,
-  backgroundColor: const Color(0xffEAF3FF),
-  iconBackgroundColor: const Color(0xffCFE4FF),
-  iconColor: const Color(0xff1F4FB8),
+  backgroundColor: const Color(0xfffff1e6),
+  iconBackgroundColor: const Color(0xffffd8b3),
+  iconColor: Colors.orange,
   onTap: () {
     Navigator.push(
       context,
@@ -267,11 +270,12 @@ class AdminDashboard extends StatelessWidget {
 
 
             DashboardCard(
-  title: "Teachers",
+  title: "Teachers",          
   icon: Icons.person,
-  backgroundColor: const Color(0xffEAF8EF),
-  iconBackgroundColor: const Color(0xffC9F0D6),
-  iconColor: Colors.green,
+  backgroundColor: const Color(0xffEAF3FF),
+  iconBackgroundColor: const Color(0xffCFE4FF),
+  iconColor: const Color(0xff1F4FB8),
+
   onTap: () {
     Navigator.push(
       context,
@@ -287,10 +291,11 @@ class AdminDashboard extends StatelessWidget {
 
            DashboardCard(
   title: "Parents",
-  icon: Icons.family_restroom,
-  backgroundColor: const Color(0xfffff1e6),
-  iconBackgroundColor: const Color(0xffffd8b3),
-  iconColor: Colors.orange,
+  icon: Icons.family_restroom,           
+  backgroundColor: const Color(0xffEAF8EF),
+  iconBackgroundColor: const Color(0xffC9F0D6),
+  iconColor: Colors.green,
+
   onTap: () {
     Navigator.push(
       context,
@@ -304,17 +309,17 @@ class AdminDashboard extends StatelessWidget {
 
 
 
-           DashboardCard(
-  title: "AI Reports",
-  icon: Icons.analytics,
-  backgroundColor: const Color(0xffF3ECFF),
-  iconBackgroundColor: const Color(0xffDDC8FF),
-  iconColor: Colors.purple,
+          DashboardCard(
+  title: "Announcements",
+  icon: Icons.campaign,
+  backgroundColor: const Color(0xffFDECEC),
+  iconBackgroundColor: const Color(0xffF8CACA),
+  iconColor: Colors.red,
   onTap: () {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const AIReportsScreen(),
+        builder: (_) => const AnnouncementManagementScreen(),
       ),
     );
   },

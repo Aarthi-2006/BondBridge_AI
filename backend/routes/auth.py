@@ -19,9 +19,17 @@ def login():
         cursor = conn.cursor(dictionary=True)
 
         query = """
-            SELECT user_id, full_name, email, role
-            FROM users
-            WHERE email=%s AND password=%s
+        SELECT
+        u.user_id,
+        u.full_name,
+        u.email,
+        u.role,
+        t.teacher_id
+        FROM users u
+        LEFT JOIN teachers t
+        ON u.user_id = t.user_id
+        WHERE u.email=%s
+        AND u.password=%s
         """
 
         cursor.execute(query, (email, password))

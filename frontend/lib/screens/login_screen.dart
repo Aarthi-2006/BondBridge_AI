@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
+import '../services/session.dart';
 import '../services/api_service.dart';
 import 'admin_dashboard.dart';
 import 'teacher_dashboard.dart';
@@ -54,6 +54,13 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       if (result["message"] == "Login successful") {
+        Session.userId = result["user"]["user_id"];
+
+Session.teacherId = result["user"]["teacher_id"];
+
+Session.role = result["user"]["role"];
+
+Session.fullName = result["user"]["full_name"];
 
         String role = result["role"].toString().toLowerCase();
 
@@ -71,7 +78,8 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (_) => const TeacherDashboard(),
+              builder: (_) => TeacherDashboard(  
+teacherName: result["user"]?["full_name"]?.toString() ?? "Teacher",),
             ),
           );
 

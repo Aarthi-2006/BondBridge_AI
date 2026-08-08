@@ -25,7 +25,7 @@ def get_students():
 
         student_class = request.args.get("class")
         section = request.args.get("section")
-
+       
         query = """
         SELECT
             s.student_id,

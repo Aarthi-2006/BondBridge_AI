@@ -732,4 +732,158 @@ return response.statusCode==200;
 
 
 }
+// ======================================
+// GET ALL ANNOUNCEMENTS
+// ======================================
+
+static Future<Map<String, dynamic>> getAnnouncements() async {
+  final response = await http.get(
+    Uri.parse("$baseUrl/announcements"),
+  );
+
+  return jsonDecode(response.body);
+}
+
+// ======================================
+// GET SINGLE ANNOUNCEMENT
+// ======================================
+
+static Future<Map<String, dynamic>> getAnnouncement(int id) async {
+  final response = await http.get(
+    Uri.parse("$baseUrl/announcements/$id"),
+  );
+
+  return jsonDecode(response.body);
+}
+
+// ======================================
+// ADD ANNOUNCEMENT
+// ======================================
+
+static Future<Map<String, dynamic>> addAnnouncement(
+    Map<String, dynamic> data) async {
+  final response = await http.post(
+    Uri.parse("$baseUrl/announcements"),
+    headers: {"Content-Type": "application/json"},
+    body: jsonEncode(data),
+  );
+
+  return jsonDecode(response.body);
+}
+
+// ======================================
+// UPDATE ANNOUNCEMENT
+// ======================================
+
+static Future<Map<String, dynamic>> updateAnnouncement(
+    int id, Map<String, dynamic> data) async {
+  final response = await http.put(
+    Uri.parse("$baseUrl/announcements/$id"),
+    headers: {"Content-Type": "application/json"},
+    body: jsonEncode(data),
+  );
+
+  return jsonDecode(response.body);
+}
+
+// ======================================
+// DELETE ANNOUNCEMENT
+// ======================================
+
+static Future<Map<String, dynamic>> deleteAnnouncement(int id) async {
+  final response = await http.delete(
+    Uri.parse("$baseUrl/announcements/$id"),
+  );
+
+  return jsonDecode(response.body);
+}
+// ======================================
+// SAVE ATTENDANCE
+// ======================================
+
+static Future<bool> saveAttendance(
+Map<int, String> attendanceStatus,
+String attendanceDate,
+int teacherId,
+) async {
+
+try {
+
+final response = await http.post(
+
+Uri.parse("$baseUrl/attendance"),
+
+headers: {
+
+"Content-Type": "application/json",
+
+},
+
+body: jsonEncode({
+
+"teacher_id": teacherId,
+
+"attendance_date": attendanceDate,
+
+"attendance": attendanceStatus.entries.map((entry){
+
+return {
+
+"student_id": entry.key,
+
+"status": entry.value,
+
+};
+
+}).toList(),
+
+}),
+
+);
+
+
+return response.statusCode == 201;
+
+
+}
+
+catch(e){
+
+return false;
+
+}
+
+}
+// ======================================
+// VIEW ATTENDANCE
+// ======================================
+
+static Future<Map<String, dynamic>> viewAttendance({
+  required String studentClass,
+  required String section,
+  required String date,
+}) async {
+
+  try {
+
+    final response = await http.get(
+      Uri.parse(
+        "$baseUrl/attendance/view?class=$studentClass&section=$section&date=$date",
+      ),
+    );
+
+    return jsonDecode(response.body);
+
+  } catch (e) {
+
+    return {
+      "success": false,
+      "students": [],
+      "total": 0,
+      "message": e.toString(),
+    };
+
+  }
+
+}
 }

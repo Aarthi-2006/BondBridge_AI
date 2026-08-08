@@ -23,8 +23,11 @@ def get_attendance():
 
 
 # ADD attendance
+# ADD attendance
+
 @attendance.route("/attendance", methods=["POST"])
 def add_attendance():
+
     try:
         data = request.get_json()
 
@@ -37,14 +40,17 @@ def add_attendance():
         VALUES (%s, %s, %s, %s)
         """
 
-        values = (
-            data["student_id"],
-            data["teacher_id"],
-            data["attendance_date"],
-            data["status"]
-        )
+        for record in data["attendance"]:
 
-        cursor.execute(query, values)
+            values = (
+                record["student_id"],
+                data["teacher_id"],
+                data["attendance_date"],
+                record["status"]
+            )
+
+            cursor.execute(query, values)
+
         conn.commit()
 
         cursor.close()
@@ -52,10 +58,66 @@ def add_attendance():
 
         return jsonify({
             "success": True,
-            "message": "Attendance added successfully"
+            "message": "Attendance saved successfully"
         }), 201
 
+
     except Exception as e:
+
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+        # =====================================
+# VIEW ATTENDANCE BY CLASS, SECTION & DATE
+# =====================================
+
+@attendance.route("/attendance/view", methods=["GET"])
+def view_attendance():
+
+    try:
+
+        student_class = request.args.get("class")
+        section = request.args.get("section")
+        attendance_date = request.args.get("date")
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+        SELECT
+            s.student_id,
+            u.full_name AS student_name,
+            a.status
+        FROM students s
+        JOIN users u
+            ON s.user_id = u.user_id
+        LEFT JOIN attendance a
+            ON s.student_id = a.student_id
+            AND a.attendance_date = %s
+        WHERE s.class = %s
+        AND s.section = %s
+        ORDER BY u.full_name
+        """
+
+        cursor.execute(
+            query,
+            (attendance_date, student_class, section)
+        )
+
+        students = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "total": len(students),
+            "students": students
+        })
+
+    except Exception as e:
+
         return jsonify({
             "success": False,
             "message": str(e)

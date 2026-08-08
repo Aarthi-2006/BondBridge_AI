@@ -3,8 +3,7 @@ import '../screens/login_screen.dart';
 import '../screens/student_management/student_management_screen.dart';
 import '../screens/teacher_management/teacher_management_screen.dart';
 import '../screens/parent_management/parent_management_screen.dart';
-import '../screens/ai_reports_screen.dart';
-
+import '../screens/announcement_management/announcement_management_screen.dart';
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
 
@@ -60,18 +59,22 @@ class AppDrawer extends StatelessWidget {
             },
           ),
 
-          ListTile(
-            leading: const Icon(Icons.analytics),
-            title: const Text("AI Reports"),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const AIReportsScreen(),
-                ),
-              );
-            },
-          ),
+         ListTile(
+  leading: const Icon(
+    Icons.campaign,
+  ),
+  title: const Text("Announcements"),
+  onTap: () {
+    Navigator.pop(context);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const AnnouncementManagementScreen(),
+      ),
+    );
+  },
+),
 
           const Divider(),
 
