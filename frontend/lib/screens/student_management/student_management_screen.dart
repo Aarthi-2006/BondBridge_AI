@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import '../../services/class_permission_service.dart';
+import '../../services/session.dart';
 
 class StudentManagementScreen extends StatefulWidget {
   const StudentManagementScreen({super.key});
@@ -42,6 +44,8 @@ class _StudentManagementScreenState
 
   bool isLoading = false;
   bool showPassword = false;
+  List<Map<String, dynamic>> assignedClasses = [];
+bool isTeacher = false;
 
   final List<String> classes = [
     "1",
@@ -71,11 +75,26 @@ class _StudentManagementScreenState
     "Other",
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    loadStudents();
+ @override
+void initState() {
+  super.initState();
+  initializeScreen();
+}
+
+Future<void> initializeScreen() async {
+  isTeacher = Session.role == "Teacher";
+
+  if (isTeacher) {
+    assignedClasses = ClassPermissionService.getClasses();
+
+    if (assignedClasses.isNotEmpty) {
+      selectedClass = assignedClasses.first["class"];
+      selectedSection = assignedClasses.first["section"];
+    }
   }
+
+  await loadStudents();
+}
   // ==========================
 // LOAD STUDENTS
 // ==========================
@@ -84,15 +103,46 @@ Future<void> loadStudents() async {
     isLoading = true;
   });
 
-  final data = await ApiService.getStudents(
-    studentClass: selectedClass,
-    section: selectedSection,
-  );
+  if (isTeacher) {
+    // Teacher: load students only from assigned classes
+    List allStudents = [];
 
-  setState(() {
-    students = data;
-    isLoading = false;
-  });
+    for (final assignedClass in assignedClasses) {
+      final className = assignedClass["class"]?.toString();
+      final sectionName = assignedClass["section"]?.toString();
+
+      if (className == null || sectionName == null) {
+        continue;
+      }
+
+      final data = await ApiService.getStudents(
+        studentClass: className,
+        section: sectionName,
+      );
+
+      allStudents.addAll(data);
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      students = allStudents;
+      isLoading = false;
+    });
+  } else {
+    // Admin: EXISTING behavior remains unchanged
+    final data = await ApiService.getStudents(
+      studentClass: selectedClass,
+      section: selectedSection,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      students = data;
+      isLoading = false;
+    });
+  }
 }
 
 // ==========================
@@ -339,7 +389,7 @@ void showStudentDialog() {
                   const SizedBox(height: 12),
 
                   DropdownButtonFormField<String>(
-                    value: selectedClass,
+                    initialValue: selectedClass,
                     decoration: const InputDecoration(
                       labelText: "Class",
                     ),
@@ -363,7 +413,7 @@ void showStudentDialog() {
                   const SizedBox(height: 12),
 
                   DropdownButtonFormField<String>(
-                    value: selectedSection,
+                    initialValue: selectedSection,
                     decoration: const InputDecoration(
                       labelText: "Section",
                     ),
@@ -387,7 +437,7 @@ void showStudentDialog() {
                   const SizedBox(height: 12),
 
                   DropdownButtonFormField<String>(
-                    value: selectedGender,
+                    initialValue: selectedGender,
                     decoration: const InputDecoration(
                       labelText: "Gender",
                     ),
@@ -481,7 +531,9 @@ void dispose() {
         backgroundColor: Colors.blue,
       ),
 
-      floatingActionButton: FloatingActionButton(
+     floatingActionButton: isTeacher
+    ? null
+    : FloatingActionButton(
         backgroundColor: Colors.blue,
         onPressed: openAddStudent,
         child: const Icon(Icons.add),
@@ -493,6 +545,7 @@ void dispose() {
           // ==========================
           // CLASS & SECTION FILTER
           // ==========================
+    if (!isTeacher) ...[
 
           Padding(
             padding: const EdgeInsets.all(12),
@@ -501,19 +554,19 @@ void dispose() {
 
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: selectedClass,
+                    initialValue: selectedClass,
                     decoration: const InputDecoration(
                       labelText: "Class",
                       border: OutlineInputBorder(),
                     ),
                     items: classes
-                        .map(
-                          (c) => DropdownMenuItem(
-                            value: c,
-                            child: Text(c),
-                          ),
-                        )
-                        .toList(),
+    .map(
+      (c) => DropdownMenuItem(
+        value: c,
+        child: Text(c),
+      ),
+    )
+    .toList(),
                     onChanged: (value) {
                       setState(() {
                         selectedClass = value;
@@ -526,7 +579,7 @@ void dispose() {
 
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: selectedSection,
+                    initialValue: selectedSection,
                     decoration: const InputDecoration(
                       labelText: "Section",
                       border: OutlineInputBorder(),
@@ -568,14 +621,30 @@ void dispose() {
 
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        selectedClass = null;
-                        selectedSection = null;
-                      });
+                    onPressed: () async {
 
-                      loadStudents();
-                    },
+  if (isTeacher) {
+
+    if (assignedClasses.isNotEmpty) {
+
+      setState(() {
+        selectedClass = assignedClasses.first["class"];
+        selectedSection = assignedClasses.first["section"];
+      });
+
+    }
+
+  } else {
+
+    setState(() {
+      selectedClass = null;
+      selectedSection = null;
+    });
+
+  }
+
+  await loadStudents();
+},
                     icon: const Icon(Icons.refresh),
                     label: const Text("Show All"),
                   ),
@@ -584,7 +653,7 @@ void dispose() {
               ],
             ),
           ),
-
+    ],
           const SizedBox(height: 10),
 
           Card(
@@ -662,16 +731,16 @@ void dispose() {
                               child: ListTile(
 
                                 leading: CircleAvatar(
-                                  child: Text(
-                                    student["full_name"] != null &&
-                                       student["full name"].toString().isNotEmpty
-                                    ?student["full name"]
-                                        .toString()
-                                        .substring(0, 1)
-                                        .toUpperCase()
-                                        :"?",
-                                  ),
-                                ),
+  child: Text(
+    student["full_name"] != null &&
+            student["full_name"].toString().isNotEmpty
+        ? student["full_name"]
+            .toString()
+            .substring(0, 1)
+            .toUpperCase()
+        : "?",
+  ),
+),
 
                                 title: Text(
                                   student["full_name"],
@@ -704,34 +773,34 @@ void dispose() {
                                   ],
                                 ),
 
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
+                                trailing: isTeacher
+    ? null
+    : Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(
+              Icons.edit,
+              color: Colors.blue,
+            ),
+            onPressed: () {
+              openEditStudent(student);
+            },
+          ),
 
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.edit,
-                                        color: Colors.blue,
-                                      ),
-                                      onPressed: () {
-                                        openEditStudent(student);
-                                      },
-                                    ),
-
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.delete,
-                                        color: Colors.red,
-                                      ),
-                                      onPressed: () {
-                                        deleteStudent(
-                                          student["student_id"],
-                                        );
-                                      },
-                                    ),
-
-                                  ],
-                                ),
+          IconButton(
+            icon: const Icon(
+              Icons.delete,
+              color: Colors.red,
+            ),
+            onPressed: () {
+              deleteStudent(
+                student["student_id"],
+              );
+            },
+          ),
+        ],
+      ),
                               ),
                             );
 

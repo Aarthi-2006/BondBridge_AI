@@ -201,7 +201,7 @@ teacherName: result["user"]?["full_name"]?.toString() ?? "Teacher",),
 
                     BoxShadow(
 
-                      color: Colors.black.withOpacity(.08),
+                      color: Colors.black.withValues(alpha:.08),
 
                       blurRadius: 20,
 
@@ -452,7 +452,7 @@ SizedBox(
 
         BoxShadow(
 
-          color: Colors.blue.withOpacity(.30),
+          color: Colors.blue.withValues(alpha:.30),
 
           blurRadius: 15,
 

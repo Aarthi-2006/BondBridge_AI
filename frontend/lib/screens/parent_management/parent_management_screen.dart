@@ -81,6 +81,7 @@ class _ParentManagementScreenState
         parents = result["parents"] ?? [];
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Error : $e"),
@@ -110,6 +111,7 @@ class _ParentManagementScreenState
 
       setState(() {});
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Error : $e"),
@@ -207,7 +209,7 @@ class _ParentManagementScreenState
                       const SizedBox(height: 15),
 
                       DropdownButtonFormField<String>(
-                        value: dialogClass,
+                        initialValue: dialogClass,
                         decoration: const InputDecoration(
                           labelText: "Class",
                           prefixIcon: Icon(Icons.class_),
@@ -231,7 +233,7 @@ class _ParentManagementScreenState
                       const SizedBox(height: 15),
 
                       DropdownButtonFormField<String>(
-                        value: dialogSection,
+                        initialValue: dialogSection,
                         decoration: const InputDecoration(
                           labelText: "Section",
                           prefixIcon: Icon(Icons.group),
@@ -277,7 +279,7 @@ class _ParentManagementScreenState
   studentClass: dialogClass!,
   section: dialogSection!,
 );
-print(result);
+debugPrint(result.toString());
 setDialogState(() {
   students = result;
 });
@@ -288,7 +290,7 @@ setDialogState(() {
                       const SizedBox(height: 15),
 
                       DropdownButtonFormField<String>(
-                        value: students.any(
+                        initialValue: students.any(
                                 (s) =>
                                     s["student_id"].toString() ==
                                     studentId)
@@ -319,7 +321,7 @@ setDialogState(() {
                       const SizedBox(height: 15),
 
                       DropdownButtonFormField<String>(
-                        value: relationship,
+                        initialValue: relationship,
                         decoration: const InputDecoration(
                           labelText: "Relationship",
                           prefixIcon: Icon(Icons.family_restroom),
@@ -385,9 +387,9 @@ setDialogState(() {
                       );
                     }
 
-                    if (mounted) {
-                      Navigator.pop(context);
-                    }
+                    if (!context.mounted) return; 
+                    Navigator.pop(context);
+                    
 
                     loadParents();
                   },
@@ -500,7 +502,7 @@ setDialogState(() {
 
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: selectedClass,
+                            initialValue: selectedClass,
                             decoration: const InputDecoration(
                               labelText: "Class",
                               border: OutlineInputBorder(),
@@ -525,7 +527,7 @@ setDialogState(() {
 
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: selectedSection,
+                            initialValue: selectedSection,
                             decoration: const InputDecoration(
                               labelText: "Section",
                               border: OutlineInputBorder(),

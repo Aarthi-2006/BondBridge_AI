@@ -1,20 +1,36 @@
-
 import 'package:flutter/material.dart';
 
 import '../widgets/dashboard_card.dart';
 import '../widgets/app_drawer.dart';
 import 'attendance_screen.dart';
 import 'login_screen.dart';
+import 'student_management/student_management_screen.dart';
+import '../services/class_permission_service.dart';
+import 'marks_screen.dart';
 
-class TeacherDashboard extends StatelessWidget {
-    final String teacherName;
+class TeacherDashboard extends StatefulWidget {
+  final String teacherName;
 
   const TeacherDashboard({
     super.key,
     required this.teacherName,
+  });
 
-});
+  @override
+  State<TeacherDashboard> createState() => _TeacherDashboardState();
+}
 
+class _TeacherDashboardState extends State<TeacherDashboard> {
+
+  @override
+  void initState() {
+    super.initState();
+    loadPermissions();
+  }
+
+  Future<void> loadPermissions() async {
+    await ClassPermissionService.loadPermissions();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -181,8 +197,7 @@ class TeacherDashboard extends StatelessWidget {
 
 
                         Text(
-  teacherName,
-  style: const TextStyle(
+widget.teacherName,  style: const TextStyle(
     color: Colors.white,
     fontSize: 16,
   ),
@@ -224,14 +239,14 @@ class TeacherDashboard extends StatelessWidget {
 
 
 
-      body: Padding(
+      body: SingleChildScrollView(
   padding: const EdgeInsets.all(16),
   child: Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
 
       Text(
-        "👋 Welcome, $teacherName",
+        "👋 Welcome, ${widget.teacherName}",
         style: const TextStyle(
           fontSize: 26,
           fontWeight: FontWeight.bold,
@@ -337,9 +352,14 @@ DashboardCard(
   backgroundColor: const Color(0xfffff1e6),
   iconBackgroundColor: const Color(0xffffd8b3),
   iconColor: Colors.orange,
-  onTap: () {
-    // We will connect this later
-  },
+ onTap: () {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const StudentManagementScreen(),
+    ),
+  );
+},
 ),
 
 
@@ -371,7 +391,11 @@ DashboardCard(
   iconBackgroundColor: const Color(0xffC9F0D6),
   iconColor: Colors.green,
   onTap: () {
-    // We will connect this later
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder:(context)=>const MarksScreen(),
+      ),
+    );
   },
 ),
 
@@ -434,7 +458,7 @@ Widget _summaryCard({
       borderRadius: BorderRadius.circular(16),
       boxShadow: [
         BoxShadow(
-          color: Colors.grey.withOpacity(0.15),
+          color: Colors.grey.withValues(alpha:0.15),
           blurRadius: 8,
           offset: const Offset(0, 4),
         ),
@@ -444,7 +468,7 @@ Widget _summaryCard({
       children: [
         CircleAvatar(
           radius: 22,
-          backgroundColor: color.withOpacity(0.15),
+          backgroundColor: color.withValues(alpha:0.15),
           child: Icon(
             icon,
             color: color,

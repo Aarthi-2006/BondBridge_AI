@@ -511,6 +511,109 @@ static Future<Map<String, dynamic>> deleteTeacher(
 
 }
  
+ // ======================================
+// GET TEACHERS LIST
+// ======================================
+
+static Future<List<dynamic>> getTeachersList() async {
+
+  try {
+
+    final response = await http.get(
+      Uri.parse("$baseUrl/teachers_list"),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    return [];
+
+  } catch (e) {
+
+    return [];
+
+  }
+
+}
+
+// ======================================
+// ASSIGN CLASS TEACHER
+// ======================================
+
+static Future<Map<String,dynamic>> assignClassTeacher({
+
+  required int teacherId,
+  required String className,
+  required String section,
+
+}) async {
+
+  try {
+
+    final response = await http.post(
+
+      Uri.parse("$baseUrl/assign_class_teacher"),
+
+      headers: {
+        "Content-Type":"application/json"
+      },
+
+      body: jsonEncode({
+
+        "teacher_id": teacherId,
+        "class": className,
+        "section": section
+
+      }),
+
+    );
+
+    return jsonDecode(response.body);
+
+  } catch(e){
+
+    return {
+      "success":false,
+      "message":"Unable to connect to server"
+    };
+
+  }
+
+}
+// ======================================
+// GET ASSIGNED CLASSES OF TEACHER
+// ======================================
+
+static Future<List<dynamic>> getTeacherClasses(
+    int teacherId,
+) async {
+
+  try {
+
+    final response = await http.get(
+      Uri.parse(
+        "$baseUrl/teacher_classes/$teacherId",
+      ),
+    );
+
+    if (response.statusCode == 200) {
+
+      final data = jsonDecode(response.body);
+
+      return data["classes"];
+
+    }
+
+    return [];
+
+  } catch (e) {
+
+    return [];
+
+  }
+
+}
 
   // =====================================================
 // GET PARENTS
@@ -885,5 +988,74 @@ static Future<Map<String, dynamic>> viewAttendance({
 
   }
 
+}
+// ======================================
+// GET MARKS
+// ======================================
+
+static Future<List> getMarks() async {
+  try {
+    final response = await http.get(
+      Uri.parse("$baseUrl/marks"),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    return [];
+  } catch (e) {
+    return [];
+  }
+}
+
+
+// ======================================
+// ADD MARKS
+// ======================================
+
+
+static Future<Map<String, dynamic>> addMarks({
+  required int studentId,
+  required int teacherId,
+  required String subject,
+  required String assessmentType,
+  required String assessmentCategory,
+  required String assessmentName,
+  String? assessmentDate,
+  String? academicYear,
+  required double marksObtained,
+  required double totalMarks,
+  String? teacherRemarks,
+}) async {
+  final response = await http.post(
+    Uri.parse("$baseUrl/marks"),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: jsonEncode({
+      "student_id": studentId,
+      "teacher_id": teacherId,
+      "subject": subject,
+      "assessment_type": assessmentType,
+      "assessment_category": assessmentCategory,
+      "assessment_name": assessmentName,
+      "assessment_date": assessmentDate,
+      "academic_year": academicYear,
+      "marks_obtained": marksObtained,
+      "total_marks": totalMarks,
+      "teacher_remarks": teacherRemarks,
+    }),
+  );
+
+  final data = jsonDecode(response.body);
+
+  if (response.statusCode == 201) {
+    return data;
+  } else {
+    throw Exception(
+      data["error"] ?? "Failed to add marks",
+    );
+  }
 }
 }

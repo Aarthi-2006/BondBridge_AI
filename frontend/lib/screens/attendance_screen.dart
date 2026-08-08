@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../services/session.dart';
+import '../../services/class_permission_service.dart';
+
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
 
@@ -23,7 +25,7 @@ bool isSaving = false;
 Map<int, String> attendanceStatus = {};
 List viewAttendanceList = [];
 int totalStudents = 0;
-
+List assignedClasses = [];
 
   final List<String> classes = [
 
@@ -51,6 +53,23 @@ int totalStudents = 0;
     "D"
 
   ];
+  @override
+void initState() {
+  super.initState();
+
+  if (Session.role == "Teacher") {
+    loadTeacherClasses();
+  }
+}
+Future<void> loadTeacherClasses() async {
+  await ClassPermissionService.loadPermissions();
+
+  if (!mounted) return;
+
+  setState(() {
+    assignedClasses = ClassPermissionService.getClasses();
+  });
+}
   Future<void> loadStudents() async {
 
 
@@ -72,7 +91,25 @@ return;
 
 }
 
+// Teacher can only view attendance for assigned classes
+if (Session.role == "Teacher") {
+  final allowed = assignedClasses.any(
+    (assignedClass) =>
+        assignedClass["class"]?.toString() == selectedClass &&
+        assignedClass["section"]?.toString() == selectedSection,
+  );
 
+  if (!allowed) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          "You are not assigned to this class and section",
+        ),
+      ),
+    );
+    return;
+  }
+}
 
 setState(() {
 
@@ -115,7 +152,7 @@ isLoading=false;
 
 });
 
-
+if (!mounted) return;
 ScaffoldMessenger.of(context).showSnackBar(
 
 const SnackBar(
@@ -145,6 +182,7 @@ Future loadAttendance() async {
 
     return;
   }
+ 
 
   setState(() {
     isLoading = true;
@@ -170,7 +208,7 @@ Future loadAttendance() async {
     setState(() {
       isLoading = false;
     });
-
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Failed to load attendance"),
@@ -496,56 +534,37 @@ const SizedBox(height:25),
 
 
 
-DropdownButtonFormField<String>(
+DropdownButtonFormField(
+  decoration: const InputDecoration(
+    labelText: "Select Class",
+    border: OutlineInputBorder(),
+  ),
+  initialValue: selectedClass,
+  items: Session.role == "Teacher"
+      ? assignedClasses
+          .map<DropdownMenuItem<String>>((assignedClass) {
+          final className =
+              assignedClass["class"]?.toString();
 
+          return DropdownMenuItem<String>(
+            value: className,
+            child: Text("Class $className"),
+          );
+        }).toList()
+      : classes.map<DropdownMenuItem<String>>((value) {
+          return DropdownMenuItem<String>(
+            value: value.toString(),
+            child: Text("Class $value"),
+          );
+        }).toList(),
 
-decoration:const InputDecoration(
-
-labelText:"Select Class",
-
-border:OutlineInputBorder(),
-
+  onChanged: (value) {
+    setState(() {
+      selectedClass = value;
+      selectedSection = null;
+    });
+  },
 ),
-
-
-value:selectedClass,
-
-
-items:classes.map((value){
-
-
-return DropdownMenuItem(
-
-value:value,
-
-child:Text(
-
-"Class $value",
-
-),
-
-);
-
-
-}).toList(),
-
-
-
-onChanged:(value){
-
-
-setState(() {
-
-selectedClass=value.toString();
-
-});
-
-
-},
-
-
-),
-
 
 
 
@@ -556,53 +575,40 @@ const SizedBox(height:20),
 
 
 DropdownButtonFormField<String>(
+  decoration: const InputDecoration(
+    labelText: "Select Section",
+    border: OutlineInputBorder(),
+  ),
+  initialValue: selectedSection,
+  items: Session.role == "Teacher"
+      ? assignedClasses
+          .where(
+            (assignedClass) =>
+                assignedClass["class"]?.toString() ==
+                selectedClass,
+          )
+          .map<DropdownMenuItem<String>>((assignedClass) {
+            final sectionName =
+                assignedClass["section"]?.toString();
 
+            return DropdownMenuItem<String>(
+              value: sectionName,
+              child: Text("Section $sectionName"),
+            );
+          })
+          .toList()
+      : sections.map<DropdownMenuItem<String>>((value) {
+          return DropdownMenuItem<String>(
+            value: value.toString(),
+            child: Text("Section $value"),
+          );
+        }).toList(),
 
-decoration:const InputDecoration(
-
-labelText:"Select Section",
-
-border:OutlineInputBorder(),
-
-),
-
-
-value:selectedSection,
-
-
-items:sections.map((value){
-
-
-return DropdownMenuItem(
-
-value:value,
-
-child:Text(
-
-"Section $value",
-
-),
-
-);
-
-
-}).toList(),
-
-
-
-onChanged:(value){
-
-
-setState(() {
-
-selectedSection=value.toString();
-
-});
-
-
-},
-
-
+  onChanged: (value) {
+    setState(() {
+      selectedSection = value;
+    });
+  },
 ),
 
 
@@ -781,6 +787,7 @@ onPressed: () async {
   );
 
   if (success) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Attendance saved successfully"),
@@ -791,6 +798,7 @@ onPressed: () async {
 
     setState(() {});
   } else {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Failed to save attendance"),
@@ -871,80 +879,81 @@ Widget viewAttendance() {
 
         const SizedBox(height: 25),
 
-        DropdownButtonFormField(
+        DropdownButtonFormField<String>(
+  decoration: const InputDecoration(
+    labelText: "Select Class",
+    border: OutlineInputBorder(),
+  ),
 
-          decoration: const InputDecoration(
+  initialValue: selectedClass,
 
-            labelText: "Select Class",
+  items: Session.role == "Teacher"
+      ? assignedClasses
+          .map<DropdownMenuItem<String>>((assignedClass) {
+            final className =
+                assignedClass["class"]?.toString();
 
-            border: OutlineInputBorder(),
-
-          ),
-
-          value: selectedClass,
-
-          items: classes.map((value) {
-
-            return DropdownMenuItem(
-
-              value: value,
-
-              child: Text("Class $value"),
-
+            return DropdownMenuItem<String>(
+              value: className,
+              child: Text("Class $className"),
             );
+          })
+          .toList()
+      : classes.map<DropdownMenuItem<String>>((value) {
+          return DropdownMenuItem<String>(
+            value: value.toString(),
+            child: Text("Class $value"),
+          );
+        }).toList(),
 
-          }).toList(),
-
-          onChanged: (value) {
-
-            setState(() {
-
-              selectedClass = value.toString();
-
-            });
-
-          },
-
-        ),
+  onChanged: (value) {
+    setState(() {
+      selectedClass = value;
+      selectedSection = null;
+    });
+  },
+),
 
         const SizedBox(height: 20),
 
-        DropdownButtonFormField(
+        DropdownButtonFormField<String>(
+  decoration: const InputDecoration(
+    labelText: "Select Section",
+    border: OutlineInputBorder(),
+  ),
 
-          decoration: const InputDecoration(
+  initialValue: selectedSection,
 
-            labelText: "Select Section",
+  items: Session.role == "Teacher"
+      ? assignedClasses
+          .where(
+            (assignedClass) =>
+                assignedClass["class"]?.toString() ==
+                selectedClass,
+          )
+          .map<DropdownMenuItem<String>>((assignedClass) {
+            final sectionName =
+                assignedClass["section"]?.toString();
 
-            border: OutlineInputBorder(),
-
-          ),
-
-          value: selectedSection,
-
-          items: sections.map((value) {
-
-            return DropdownMenuItem(
-
-              value: value,
-
-              child: Text("Section $value"),
-
+            return DropdownMenuItem<String>(
+              value: sectionName,
+              child: Text("Section $sectionName"),
             );
+          })
+          .toList()
+      : sections.map<DropdownMenuItem<String>>((value) {
+          return DropdownMenuItem<String>(
+            value: value.toString(),
+            child: Text("Section $value"),
+          );
+        }).toList(),
 
-          }).toList(),
-
-          onChanged: (value) {
-
-            setState(() {
-
-              selectedSection = value.toString();
-
-            });
-
-          },
-
-        ),
-
+  onChanged: (value) {
+    setState(() {
+      selectedSection = value;
+    });
+  },
+),
         const SizedBox(height: 20),
 
         InkWell(

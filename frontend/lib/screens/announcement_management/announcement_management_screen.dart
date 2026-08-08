@@ -795,7 +795,7 @@ class _AnnouncementManagementScreenState
 
                     DropdownButtonFormField<String>(
 
-                      value: selectedAudience,
+                      initialValue: selectedAudience,
 
                       decoration: const InputDecoration(
 

@@ -510,11 +510,43 @@ void showTeacherDialog() {
       ),
 
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.blue,
-        onPressed: openAddTeacher,
-        child: const Icon(Icons.add),
-      ),
+  backgroundColor: Colors.blue,
+  child: const Icon(Icons.add),
+  onPressed: () {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
 
+              ListTile(
+                leading: const Icon(Icons.person_add),
+                title: const Text("Add Teacher"),
+                onTap: () {
+                  Navigator.pop(context);
+                  openAddTeacher();
+                },
+              ),
+
+              ListTile(
+                leading: const Icon(Icons.school),
+                title: const Text("Assign Class Teacher"),
+                onTap: () {
+                  Navigator.pop(context);
+
+                  // We'll navigate here next
+                },
+              ),
+
+            ],
+          ),
+        );
+      },
+    );
+  },
+),
       body: Column(
         children: [
 

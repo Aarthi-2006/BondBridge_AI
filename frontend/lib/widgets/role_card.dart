@@ -24,7 +24,7 @@ class RoleCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha:0.06),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
@@ -34,7 +34,7 @@ class RoleCard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundColor: color.withOpacity(0.15),
+              backgroundColor: color.withValues(alpha:0.15),
               child: Icon(
                 icon,
                 color: color,
