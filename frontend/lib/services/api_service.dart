@@ -1071,4 +1071,50 @@ static Future<Map<String, dynamic>> addMarks({
     );
   }
 }
+// ==========================================
+// ADD HOMEWORK
+// ==========================================
+
+static Future<Map<String, dynamic>> addHomework(
+    Map<String, dynamic> data) async {
+  final response = await http.post(
+    Uri.parse("$baseUrl/homework"),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: jsonEncode(data),
+  );
+
+  return jsonDecode(response.body);
+}
+// ==========================================
+// GET HOMEWORK
+// ==========================================
+
+static Future<List<dynamic>> getHomework({
+  int? teacherId,
+  String? className,
+  String? section,
+  String? subject,
+}) async {
+  Map<String, String> params = {};
+
+  if (teacherId != null) params["teacher_id"] = teacherId.toString();
+  if (className != null) params["class"] = className;
+  if (section != null) params["section"] = section;
+  if (subject != null) params["subject"] = subject;
+
+  final uri = Uri.parse("$baseUrl/homework")
+      .replace(queryParameters: params);
+
+  final response = await http.get(uri);
+
+  final data = jsonDecode(response.body);
+
+  if (data["success"] == true) {
+    return data["homework"];
+  }
+
+  return [];
+}
 }

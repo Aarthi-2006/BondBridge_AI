@@ -33,4 +33,25 @@ class ClassPermissionService {
   static List<Map<String, dynamic>> getClasses() {
     return assignedClasses;
   }
+  // ==========================================
+// GET AVAILABLE CLASSES
+// ==========================================
+
+static List<String> getAvailableClasses() {
+  return assignedClasses
+      .map((e) => e["class"].toString())
+      .toSet()
+      .toList();
+}
+
+// ==========================================
+// GET AVAILABLE SECTIONS
+// ==========================================
+
+static List<String> getAvailableSections(String className) {
+  return assignedClasses
+      .where((e) => e["class"].toString() == className)
+      .map((e) => e["section"].toString())
+      .toList();
+}
 }

@@ -7,6 +7,7 @@ import 'login_screen.dart';
 import 'student_management/student_management_screen.dart';
 import '../services/class_permission_service.dart';
 import 'marks_screen.dart';
+import 'homework_screen.dart';
 
 class TeacherDashboard extends StatefulWidget {
   final String teacherName;
@@ -410,7 +411,12 @@ DashboardCard(
   iconBackgroundColor: const Color(0xffF8CACA),
   iconColor: Colors.red,
   onTap: () {
-    // We will connect this later
+       Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) =>const HomeworkScreen(),
+  ),
+);
   },
 ),
   
