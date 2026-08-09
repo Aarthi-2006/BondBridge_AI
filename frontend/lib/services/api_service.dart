@@ -993,10 +993,21 @@ static Future<Map<String, dynamic>> viewAttendance({
 // GET MARKS
 // ======================================
 
-static Future<List> getMarks() async {
+// ======================================
+// GET MARKS
+// ======================================
+
+static Future<List> getMarks({
+  required String studentClass,
+  required String section,
+}) async {
+
   try {
+
     final response = await http.get(
-      Uri.parse("$baseUrl/marks"),
+      Uri.parse(
+        "$baseUrl/marks?class=$studentClass&section=$section",
+      ),
     );
 
     if (response.statusCode == 200) {
@@ -1004,9 +1015,11 @@ static Future<List> getMarks() async {
     }
 
     return [];
+
   } catch (e) {
     return [];
   }
+
 }
 
 

@@ -330,8 +330,7 @@ Row(
 
 const SizedBox(height: 20),
 
-      Expanded(
-        child: GridView.count(
+      GridView.count(
 
           crossAxisCount: 2,
 
@@ -340,6 +339,8 @@ const SizedBox(height: 20),
 
 
           mainAxisSpacing: 15,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
 
 
 
@@ -438,7 +439,7 @@ DashboardCard(
 
               ],
         ),
-      ),
+      
     ],
   ),
 ),

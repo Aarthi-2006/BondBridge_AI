@@ -7,11 +7,21 @@ marks_bp = Blueprint("marks", __name__)
 # =========================================================
 # GET MARKS
 # =========================================================
+# =========================================================
+# GET MARKS
+# =========================================================
+
+# =========================================================
+# GET MARKS
+# =========================================================
+
 @marks_bp.route("/marks", methods=["GET"])
 def get_marks():
 
     student_id = request.args.get("student_id")
     teacher_id = request.args.get("teacher_id")
+    student_class = request.args.get("class")
+    section = request.args.get("section")
 
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -19,11 +29,15 @@ def get_marks():
     query = """
         SELECT
             m.mark_id,
-            m.student_id,
+            s.student_id,
             m.teacher_id,
-            s.student_name,
+
+            u.full_name AS student_name,
+
+            s.roll_no,
             s.class,
             s.section,
+
             m.subject,
             m.exam_name,
             m.assessment_type,
@@ -34,26 +48,68 @@ def get_marks():
             m.marks_obtained,
             m.total_marks,
             m.teacher_remarks
-        FROM marks m
-        JOIN students s
-            ON m.student_id = s.student_id
+
+        FROM students s
+
+        JOIN users u
+            ON s.user_id = u.user_id
+
+        LEFT JOIN marks m
+            ON s.student_id = m.student_id
     """
 
     conditions = []
     values = []
 
+    # ==========================================
+    # STUDENT FILTER
+    # ==========================================
+
     if student_id:
-        conditions.append("m.student_id = %s")
+        conditions.append("s.student_id = %s")
         values.append(student_id)
 
+    # ==========================================
+    # TEACHER FILTER
+    # ==========================================
+
     if teacher_id:
-        conditions.append("m.teacher_id = %s")
+        query += " AND m.teacher_id = %s"
         values.append(teacher_id)
+
+    # ==========================================
+    # CLASS FILTER
+    # ==========================================
+
+    if student_class:
+        conditions.append("s.class = %s")
+        values.append(student_class)
+
+    # ==========================================
+    # SECTION FILTER
+    # ==========================================
+
+    if section:
+        conditions.append("s.section = %s")
+        values.append(section)
+
+    # ==========================================
+    # WHERE
+    # ==========================================
 
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
 
-    query += " ORDER BY m.assessment_date DESC, m.mark_id DESC"
+    # ==========================================
+    # ORDER
+    # ==========================================
+
+    query += """
+        ORDER BY
+            CAST(s.roll_no AS UNSIGNED) ASC,
+            m.assessment_date DESC,
+            m.mark_id DESC
+    """
 
     cursor.execute(query, values)
 
@@ -132,7 +188,7 @@ def add_marks():
             "error": "Marks obtained cannot be greater than total marks"
         }), 400
 
-    conn = get_db_connection()
+    conn = get_connection()
     cursor = conn.cursor()
 
     query = """

@@ -49,6 +49,8 @@ class _MarksScreenState extends State<MarksScreen> {
   List students = [];
 
   bool isLoading = false;
+  List viewMarks = [];
+  String selectedPage = "Add Marks";
 
   //=====================================================
   // CLASSES
@@ -359,6 +361,62 @@ class _MarksScreenState extends State<MarksScreen> {
     }
   }
 
+
+//=====================================================
+// LOAD VIEW MARKS
+//=====================================================
+
+Future<void> loadViewMarks() async {
+
+  if (selectedClass == null || selectedSection == null) {
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Please select Class and Section."),
+      ),
+    );
+
+    return;
+  }
+
+  setState(() {
+    isLoading = true;
+    viewMarks = [];
+  });
+
+  try {
+
+    final result = await ApiService.getMarks(
+  studentClass: selectedClass!,
+  section: selectedSection!,
+);
+
+if (!mounted) return;
+
+setState(() {
+  viewMarks = result;
+});
+  } catch (e) {
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Failed to load marks\n$e"),
+      ),
+    );
+
+  } finally {
+
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
+    }
+
+  }
+
+}
   //=====================================================
   // VALIDATION
   //=====================================================
@@ -635,6 +693,62 @@ class _MarksScreenState extends State<MarksScreen> {
 
     });
   }
+
+
+  Widget _markRow(String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+
+        SizedBox(
+          width: 110,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+
+        Expanded(
+          child: Text(value),
+        ),
+      ],
+    ),
+  );
+}
+List<Map<String, dynamic>> _groupMarksByStudent() {
+
+  final Map<String, Map<String, dynamic>> grouped = {};
+
+  for (final mark in viewMarks) {
+
+    final String studentId =
+        mark["student_id"].toString();
+
+    if (!grouped.containsKey(studentId)) {
+
+      grouped[studentId] = {
+        "student_id": studentId,
+        "student_name":
+            mark["student_name"]?.toString() ??
+                "Unknown Student",
+        "roll_no":
+            mark["roll_no"]?.toString() ?? "-",
+        "marks": [],
+      };
+    }
+
+    if (mark["mark_id"] != null) {
+
+      grouped[studentId]!["marks"].add(mark);
+    }
+  }
+
+  return grouped.values.toList();
+}
     @override
   Widget build(BuildContext context) {
 
@@ -660,7 +774,8 @@ class _MarksScreenState extends State<MarksScreen> {
                 CrossAxisAlignment.start,
 
             children: [
-
+             if (selectedPage == "Add Marks")...[
+             
               const Text(
 
                 "Enter Student Marks",
@@ -679,48 +794,48 @@ class _MarksScreenState extends State<MarksScreen> {
               // CLASS
               //====================================
 
-              DropdownButtonFormField<String>(
+        
 
-                value: selectedClass,
+Row(
+  children: [
 
-                decoration: const InputDecoration(
+    Expanded(
+      child: ElevatedButton(
+        onPressed: () {
+          setState(() {
+            selectedPage = "Add Marks";
+          });
+        },
+        child: const Text("Add Marks"),
+      ),
+    ),
 
-                  labelText: "Class",
+    const SizedBox(width: 10),
 
-                  border: OutlineInputBorder(),
+    Expanded(
+      child: ElevatedButton(
+        onPressed: () {
+          setState(() {
+            selectedPage = "View Marks";
+          });
+        },
+        child: const Text("View Marks"),
+      ),
+    ),
 
-                ),
+  ],
+),
 
-                items: availableClasses.map((item) {
+const SizedBox(height: 20),
+Text(
+  "Current Page: $selectedPage",
+  style: const TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.bold,
+  ),
+),
 
-                  return DropdownMenuItem(
-
-                    value: item,
-
-                    child: Text("Class $item"),
-
-                  );
-
-                }).toList(),
-
-                onChanged: (value) {
-
-                  setState(() {
-
-                    selectedClass = value;
-
-                    selectedSection = null;
-
-                    selectedStudentId = null;
-
-                    students = [];
-
-                  });
-
-                },
-
-              ),
-
+const SizedBox(height: 20),
               const SizedBox(height: 16),
 
               //====================================
@@ -729,7 +844,7 @@ class _MarksScreenState extends State<MarksScreen> {
 
               DropdownButtonFormField<String>(
 
-                value: selectedSection,
+                initialValue: selectedSection,
 
                 decoration: const InputDecoration(
 
@@ -806,7 +921,7 @@ class _MarksScreenState extends State<MarksScreen> {
 
               DropdownButtonFormField<String>(
 
-                value: selectedStudentId,
+                initialValue: selectedStudentId,
 
                 decoration: const InputDecoration(
 
@@ -823,7 +938,7 @@ class _MarksScreenState extends State<MarksScreen> {
                     value: student["student_id"].toString(),
 
                     child: Text(
-                      student["student_name"].toString(),
+                      student["full_name"].toString(),
                     ),
 
                   );
@@ -849,7 +964,7 @@ class _MarksScreenState extends State<MarksScreen> {
 
               DropdownButtonFormField<String>(
 
-                value: selectedSubject,
+                initialValue: selectedSubject,
 
                 decoration: const InputDecoration(
 
@@ -891,7 +1006,7 @@ class _MarksScreenState extends State<MarksScreen> {
 
               DropdownButtonFormField<String>(
 
-                value: selectedAssessmentType,
+                initialValue: selectedAssessmentType,
 
                 decoration: const InputDecoration(
 
@@ -1024,7 +1139,7 @@ class _MarksScreenState extends State<MarksScreen> {
 
               DropdownButtonFormField<String>(
 
-                value: selectedAcademicYear,
+                initialValue: selectedAcademicYear,
 
                 decoration: const InputDecoration(
 
@@ -1126,7 +1241,315 @@ class _MarksScreenState extends State<MarksScreen> {
               ),
 
               const SizedBox(height: 20),
+          
+             ],
+             if (selectedPage == "View Marks") ...[
+  Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+
+      const Text(
+        "View Student Marks",
+        style: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+
+      const SizedBox(height: 20),
+
+      // ==========================================
+      // CLASS
+      // ==========================================
+
+      DropdownButtonFormField<String>(
+        initialValue: selectedClass,
+        decoration: const InputDecoration(
+          labelText: "Class",
+          border: OutlineInputBorder(),
+        ),
+        items: availableClasses.map((item) {
+          return DropdownMenuItem<String>(
+            value: item.toString(),
+            child: Text("Class $item"),
+          );
+        }).toList(),
+        onChanged: (value) {
+          setState(() {
+            selectedClass = value;
+            selectedSection = null;
+            viewMarks = [];
+          });
+        },
+      ),
+
+      const SizedBox(height: 16),
+
+      // ==========================================
+      // SECTION
+      // ==========================================
+
+      DropdownButtonFormField<String>(
+        initialValue: selectedSection,
+        decoration: const InputDecoration(
+          labelText: "Section",
+          border: OutlineInputBorder(),
+        ),
+        items: availableSections.map((item) {
+          return DropdownMenuItem<String>(
+            value: item.toString(),
+            child: Text(item.toString()),
+          );
+        }).toList(),
+        onChanged: (value) {
+          setState(() {
+            selectedSection = value;
+            viewMarks = [];
+          });
+        },
+      ),
+
+      const SizedBox(height: 20),
+
+      // ==========================================
+      // LOAD MARKS BUTTON
+      // ==========================================
+
+      SizedBox(
+        width: double.infinity,
+        height: 50,
+        child: ElevatedButton.icon(
+          onPressed: isLoading ? null : loadViewMarks,
+          icon: const Icon(Icons.visibility),
+          label: Text(
+            isLoading ? "Loading..." : "View Marks",
+          ),
+        ),
+      ),
+
+      const SizedBox(height: 25),
+
+      // ==========================================
+      // NO MARKS
+      // ==========================================
+
+      if (!isLoading && viewMarks.isEmpty)
+        const Center(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Text(
+              "No marks found for the selected class and section.",
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+
+      // ==========================================
+      // MARKS LIST
+      // ==========================================
+
+      if (viewMarks.isNotEmpty)
+  ListView.builder(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    itemCount: _groupMarksByStudent().length,
+    itemBuilder: (context, index) {
+      final student = _groupMarksByStudent()[index];
+
+      final String studentName =
+          student["student_name"] ?? "Unknown Student";
+
+      final String rollNo =
+          student["roll_no"] ?? "-";
+
+      final List marks =
+          student["marks"] ?? [];
+
+      return Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        elevation: 3,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
+            children: [
+
+              // ======================================
+              // STUDENT HEADER
+              // ======================================
+
+              Row(
+                children: [
+
+                  const Icon(
+                    Icons.person,
+                    size: 30,
+                  ),
+
+                  const SizedBox(width: 10),
+
+                  Expanded(
+                    child: Text(
+                      studentName,
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+
+                  Text(
+                    "Roll No: $rollNo",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+
+              const Divider(height: 25),
+
+              // ======================================
+              // NO MARKS
+              // ======================================
+
+              if (marks.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(10),
+                  child: Row(
+                    children: [
+
+                      Icon(
+                        Icons.pending_actions,
+                        color: Colors.orange,
+                      ),
+
+                      SizedBox(width: 10),
+
+                      Text(
+                        "Marks Not Entered",
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // ======================================
+              // MARKS
+              // ======================================
+
+              if (marks.isNotEmpty)
+                ...marks.map<Widget>((mark) {
+
+                  final subject =
+                      mark["subject"]?.toString() ?? "-";
+
+                  final assessmentName =
+                      mark["assessment_name"]?.toString() ?? "-";
+
+                  final assessmentType =
+                      mark["assessment_type"]?.toString() ?? "-";
+
+                  final marksObtained =
+                      mark["marks_obtained"]?.toString() ?? "0";
+
+                  final totalMarks =
+                      mark["total_marks"]?.toString() ?? "0";
+
+                  final assessmentDate =
+                      mark["assessment_date"]?.toString() ?? "-";
+
+                  return Container(
+                    margin:
+                        const EdgeInsets.only(bottom: 12),
+                    padding:
+                        const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      borderRadius:
+                          BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.grey.shade300,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                      children: [
+
+                        Text(
+                          subject,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        _markRow(
+                          "Assessment",
+                          assessmentName,
+                        ),
+
+                        _markRow(
+                          "Type",
+                          assessmentType,
+                        ),
+
+                        _markRow(
+                          "Date",
+                          assessmentDate,
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
+                          children: [
+
+                            const Text(
+                              "Marks",
+                              style: TextStyle(
+                                fontWeight:
+                                    FontWeight.bold,
+                              ),
+                            ),
+
+                            Text(
+                              "$marksObtained / $totalMarks",
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight:
+                                    FontWeight.bold,
+                              ),
+                            ),
                           ],
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+            ],
+          ),
+        ),
+      );
+    },
+  ),
+    ],
+  ),
+],
+             
+              ]
+  
           ),
         ),
       ),
