@@ -8,6 +8,7 @@ from routes.homework import homework
 from routes.announcements import announcements
 from routes.class_teacher import class_teacher
 from routes.marks import marks_bp
+from routes.ai_reports import ai_reports_bp
 
 app = Flask(__name__)
 
@@ -18,6 +19,7 @@ app.register_blueprint(parents)
 app.register_blueprint(attendance)
 app.register_blueprint(marks_bp)
 app.register_blueprint(homework)
+app.register_blueprint(ai_reports_bp)
 app.register_blueprint(announcements)
 app.register_blueprint(class_teacher)
 

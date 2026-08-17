@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
+import 'session.dart';
 
 
 class ApiService {
@@ -840,24 +840,60 @@ return response.statusCode==200;
 // ======================================
 
 static Future<Map<String, dynamic>> getAnnouncements() async {
-  final response = await http.get(
-    Uri.parse("$baseUrl/announcements"),
-  );
+  try {
+    final role = Session.role ?? "";
 
-  return jsonDecode(response.body);
+    final params = <String, String>{
+      "role": role,
+    };
+
+    if (role.toLowerCase() == "teacher" &&
+        Session.teacherId != null) {
+      params["teacher_id"] = Session.teacherId.toString();
+    }
+
+    if ((role.toLowerCase() == "student" ||
+            role.toLowerCase() == "parent") &&
+        Session.userId != null) {
+      params["user_id"] = Session.userId.toString();
+    }
+
+    final uri = Uri.parse("$baseUrl/announcements")
+        .replace(queryParameters: params);
+
+    final response = await http.get(uri);
+
+    return jsonDecode(response.body);
+  } catch (e) {
+    return {
+      "success": false,
+      "total": 0,
+      "announcements": [],
+      "message": e.toString(),
+    };
+  }
 }
+
 
 // ======================================
 // GET SINGLE ANNOUNCEMENT
 // ======================================
 
 static Future<Map<String, dynamic>> getAnnouncement(int id) async {
-  final response = await http.get(
-    Uri.parse("$baseUrl/announcements/$id"),
-  );
+  try {
+    final response = await http.get(
+      Uri.parse("$baseUrl/announcements/$id"),
+    );
 
-  return jsonDecode(response.body);
+    return jsonDecode(response.body);
+  } catch (e) {
+    return {
+      "success": false,
+      "message": e.toString(),
+    };
+  }
 }
+
 
 // ======================================
 // ADD ANNOUNCEMENT
@@ -865,14 +901,32 @@ static Future<Map<String, dynamic>> getAnnouncement(int id) async {
 
 static Future<Map<String, dynamic>> addAnnouncement(
     Map<String, dynamic> data) async {
-  final response = await http.post(
-    Uri.parse("$baseUrl/announcements"),
-    headers: {"Content-Type": "application/json"},
-    body: jsonEncode(data),
-  );
+  try {
+    final requestData = Map<String, dynamic>.from(data);
 
-  return jsonDecode(response.body);
+    requestData["role"] = Session.role;
+
+    if (Session.teacherId != null) {
+      requestData["teacher_id"] = Session.teacherId;
+    }
+
+    final response = await http.post(
+      Uri.parse("$baseUrl/announcements"),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode(requestData),
+    );
+
+    return jsonDecode(response.body);
+  } catch (e) {
+    return {
+      "success": false,
+      "message": e.toString(),
+    };
+  }
 }
+
 
 // ======================================
 // UPDATE ANNOUNCEMENT
@@ -880,25 +934,58 @@ static Future<Map<String, dynamic>> addAnnouncement(
 
 static Future<Map<String, dynamic>> updateAnnouncement(
     int id, Map<String, dynamic> data) async {
-  final response = await http.put(
-    Uri.parse("$baseUrl/announcements/$id"),
-    headers: {"Content-Type": "application/json"},
-    body: jsonEncode(data),
-  );
+  try {
+    final requestData = Map<String, dynamic>.from(data);
 
-  return jsonDecode(response.body);
+    requestData["role"] = Session.role;
+
+    if (Session.teacherId != null) {
+      requestData["teacher_id"] = Session.teacherId;
+    }
+
+    final response = await http.put(
+      Uri.parse("$baseUrl/announcements/$id"),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode(requestData),
+    );
+
+    return jsonDecode(response.body);
+  } catch (e) {
+    return {
+      "success": false,
+      "message": e.toString(),
+    };
+  }
 }
+
 
 // ======================================
 // DELETE ANNOUNCEMENT
 // ======================================
 
-static Future<Map<String, dynamic>> deleteAnnouncement(int id) async {
-  final response = await http.delete(
-    Uri.parse("$baseUrl/announcements/$id"),
-  );
+static Future<Map<String, dynamic>> deleteAnnouncement(
+    int id) async {
+  try {
+    final response = await http.delete(
+      Uri.parse("$baseUrl/announcements/$id"),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "role": Session.role,
+        "teacher_id": Session.teacherId,
+      }),
+    );
 
-  return jsonDecode(response.body);
+    return jsonDecode(response.body);
+  } catch (e) {
+    return {
+      "success": false,
+      "message": e.toString(),
+    };
+  }
 }
 // ======================================
 // SAVE ATTENDANCE
@@ -1116,5 +1203,77 @@ static Future<List<dynamic>> getHomework({
   }
 
   return [];
+}
+// ==========================================
+// SUBMIT HOMEWORK
+// ==========================================
+
+static Future<Map<String, dynamic>> submitHomework({
+  required int homeworkId,
+  required int studentId,
+}) async {
+
+  try {
+
+    final response = await http.post(
+
+      Uri.parse(
+        "$baseUrl/homework/$homeworkId/submit",
+      ),
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: jsonEncode({
+
+        "student_id": studentId,
+
+      }),
+
+    );
+
+    return jsonDecode(response.body);
+
+  } catch (e) {
+
+    return {
+      "success": false,
+      "message": "Unable to connect to server",
+    };
+
+  }
+}
+
+
+// ==========================================
+// GET HOMEWORK SUBMISSIONS
+// ==========================================
+
+static Future<Map<String, dynamic>> getHomeworkSubmissions({
+  required int homeworkId,
+}) async {
+
+  try {
+
+    final response = await http.get(
+
+      Uri.parse(
+        "$baseUrl/homework/$homeworkId/submissions",
+      ),
+
+    );
+
+    return jsonDecode(response.body);
+
+  } catch (e) {
+
+    return {
+      "success": false,
+      "message": "Unable to connect to server",
+      "submissions": [],
+    };
+
+  }
 }
 }

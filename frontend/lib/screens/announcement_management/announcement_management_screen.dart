@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import '../../services/session.dart';
+import '../../services/class_permission_service.dart';
 
 class AnnouncementManagementScreen extends StatefulWidget {
   const AnnouncementManagementScreen({super.key});
@@ -38,6 +40,11 @@ class _AnnouncementManagementScreenState
   bool isLoading = false;
 
   String? selectedAudience = "All";
+  String? selectedClass;
+String? selectedSection;
+
+List<String> teacherClasses = [];
+List<String> teacherSections = [];
 
   final List<String> audiences = [
     "All",
@@ -51,15 +58,42 @@ class _AnnouncementManagementScreenState
   //=====================================================
 
   @override
-  void initState() {
-    super.initState();
+void initState() {
+  super.initState();
 
-    loadAnnouncements();
+  loadAnnouncements();
 
-    searchController.addListener(() {
-      searchAnnouncements(searchController.text);
-    });
+  if (Session.role?.toLowerCase() == "teacher") {
+    loadTeacherClasses();
   }
+
+  searchController.addListener(() {
+    searchAnnouncements(searchController.text);
+  });
+}
+
+Future<void> loadTeacherClasses() async {
+  await ClassPermissionService.loadPermissions();
+
+  if (!mounted) return;
+
+  setState(() {
+    teacherClasses =
+        ClassPermissionService.getAvailableClasses();
+
+    if (teacherClasses.isNotEmpty) {
+      selectedClass = teacherClasses.first;
+      teacherSections =
+          ClassPermissionService.getAvailableSections(
+        selectedClass!,
+      );
+
+      if (teacherSections.isNotEmpty) {
+        selectedSection = teacherSections.first;
+      }
+    }
+  });
+}
 
   //=====================================================
   // LOAD ANNOUNCEMENTS
@@ -152,14 +186,30 @@ class _AnnouncementManagementScreenState
   //=====================================================
 
   void clearForm() {
+  titleController.clear();
+  messageController.clear();
 
-    titleController.clear();
-    messageController.clear();
+  selectedAudience = "All";
 
-    selectedAudience = "All";
+  selectedClass = null;
+  selectedSection = null;
 
-    editingAnnouncement = null;
+  if (Session.role?.toLowerCase() == "teacher" &&
+      teacherClasses.isNotEmpty) {
+    selectedClass = teacherClasses.first;
+
+    teacherSections =
+        ClassPermissionService.getAvailableSections(
+      selectedClass!,
+    );
+
+    if (teacherSections.isNotEmpty) {
+      selectedSection = teacherSections.first;
+    }
   }
+
+  editingAnnouncement = null;
+}
 
   
 
@@ -179,85 +229,124 @@ class _AnnouncementManagementScreenState
   //=====================================================
 
   void openEditAnnouncement(
-      Map<String, dynamic> announcement) {
+    Map<String, dynamic> announcement) {
 
-    editingAnnouncement = announcement;
+  editingAnnouncement = announcement;
 
-    titleController.text =
-        announcement["title"] ?? "";
+  titleController.text =
+      announcement["title"] ?? "";
 
-    messageController.text =
-        announcement["message"] ?? "";
+  messageController.text =
+      announcement["message"] ?? "";
 
-    selectedAudience =
-        announcement["target_audience"] ??
-            "All";
+  selectedAudience =
+      announcement["target_audience"] ?? "All";
 
-   
+  selectedClass =
+      announcement["target_class"]?.toString();
 
-    showAnnouncementDialog();
+  selectedSection =
+      announcement["target_section"]?.toString();
+
+  if (Session.role?.toLowerCase() == "teacher" &&
+      selectedClass != null) {
+    teacherSections =
+        ClassPermissionService.getAvailableSections(
+      selectedClass!,
+    );
   }
+
+  showAnnouncementDialog();
+}
     //=====================================================
   // SAVE ANNOUNCEMENT
   //=====================================================
 
   Future<void> saveAnnouncement() async {
 
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      isLoading = true;
-    });
+  final isTeacher =
+      Session.role?.toLowerCase() == "teacher";
 
-    Map<String, dynamic> result;
-
-    if (editingAnnouncement == null) {
-
-      result = await ApiService.addAnnouncement({
-
-        "title": titleController.text.trim(),
-        "message": messageController.text.trim(),
-        "target_audience": selectedAudience,
-
-      });
-
-    } else {
-
-      result = await ApiService.updateAnnouncement(
-
-        editingAnnouncement!["announcement_id"],
-
-        {
-
-          "title": titleController.text.trim(),
-          "message": messageController.text.trim(),
-          "target_audience": selectedAudience,
-
-        },
-
-      );
-
-    }
-
-    setState(() {
-      isLoading = false;
-    });
-
-    if (!mounted) return;
+  if (isTeacher &&
+      (selectedClass == null ||
+       selectedSection == null)) {
 
     ScaffoldMessenger.of(context).showSnackBar(
-
-      SnackBar(
-        content: Text(result["message"]),
+      const SnackBar(
+        content: Text(
+          "Please select class and section",
+        ),
       ),
-
     );
+
+    return;
+  }
+
+  setState(() {
+    isLoading = true;
+  });
+
+  Map<String, dynamic> data = {
+
+    "title": titleController.text.trim(),
+
+    "message": messageController.text.trim(),
+
+    "target_audience": selectedAudience,
+
+  };
+
+  // Teacher announcements must contain class + section
+  if (isTeacher) {
+
+    data["target_class"] = selectedClass;
+
+    data["target_section"] = selectedSection;
+
+  }
+
+  Map<String, dynamic> result;
+
+  if (editingAnnouncement == null) {
+
+    result =
+        await ApiService.addAnnouncement(data);
+
+  } else {
+
+    result =
+        await ApiService.updateAnnouncement(
+      editingAnnouncement!["announcement_id"],
+      data,
+    );
+
+  }
+
+  if (!mounted) return;
+
+  setState(() {
+    isLoading = false;
+  });
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        result["message"] ??
+            "Operation completed",
+      ),
+    ),
+  );
+
+  if (result["success"] == true) {
 
     Navigator.pop(context);
 
     loadAnnouncements();
-  }
 
+  }
+}
   //=====================================================
   // DELETE
   //=====================================================
@@ -646,52 +735,45 @@ class _AnnouncementManagementScreenState
                                     ),
 
                                     const SizedBox(height: 12),
+if (
+  Session.role?.toLowerCase() == "admin" ||
+  (
+    Session.role?.toLowerCase() == "teacher" &&
+    announcement["created_by"] == "Teacher" &&
+    announcement["teacher_id"]?.toString() ==
+        Session.teacherId?.toString()
+  )
+)
+  Row(
+    mainAxisAlignment: MainAxisAlignment.end,
+    children: [
 
-                                    Row(
+      IconButton(
+        icon: const Icon(
+          Icons.edit,
+          color: Colors.blue,
+        ),
+        onPressed: () {
+          openEditAnnouncement(
+            announcement,
+          );
+        },
+      ),
 
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.end,
+      IconButton(
+        icon: const Icon(
+          Icons.delete,
+          color: Colors.red,
+        ),
+        onPressed: () {
+          deleteAnnouncement(
+            announcement["announcement_id"],
+          );
+        },
+      ),
 
-                                      children: [
-
-                                        IconButton(
-
-                                          icon: const Icon(
-                                            Icons.edit,
-                                            color: Colors.blue,
-                                          ),
-
-                                          onPressed: () {
-
-                                            openEditAnnouncement(
-                                              announcement,
-                                            );
-
-                                          },
-
-                                        ),
-
-                                        IconButton(
-
-                                          icon: const Icon(
-                                            Icons.delete,
-                                            color: Colors.red,
-                                          ),
-
-                                          onPressed: () {
-
-                                            deleteAnnouncement(
-                                              announcement[
-                                                  "announcement_id"],
-                                            );
-
-                                          },
-
-                                        ),
-
-                                      ],
-
-                                    ),
+    ],
+  ),
 
                                   ],
 
@@ -826,6 +908,81 @@ class _AnnouncementManagementScreenState
                       },
 
                     ),
+                    if (Session.role?.toLowerCase() == "teacher") ...[
+
+  const SizedBox(height: 15),
+
+  DropdownButtonFormField<String>(
+    initialValue: selectedClass,
+    decoration: const InputDecoration(
+      labelText: "Class",
+    ),
+    items: teacherClasses.map((className) {
+      return DropdownMenuItem<String>(
+        value: className,
+        child: Text(className),
+      );
+    }).toList(),
+    onChanged: (value) {
+
+      setState(() {
+
+        selectedClass = value;
+
+        teacherSections =
+            ClassPermissionService
+                .getAvailableSections(
+          value!,
+        );
+
+        selectedSection =
+            teacherSections.isNotEmpty
+                ? teacherSections.first
+                : null;
+
+      });
+
+    },
+    validator: (value) {
+
+      if (Session.role?.toLowerCase() == "teacher" &&
+          value == null) {
+        return "Required";
+      }
+
+      return null;
+    },
+  ),
+
+  const SizedBox(height: 15),
+
+  DropdownButtonFormField<String>(
+    initialValue: selectedSection,
+    decoration: const InputDecoration(
+      labelText: "Section",
+    ),
+    items: teacherSections.map((section) {
+      return DropdownMenuItem<String>(
+        value: section,
+        child: Text(section),
+      );
+    }).toList(),
+    onChanged: (value) {
+      setState(() {
+        selectedSection = value;
+      });
+    },
+    validator: (value) {
+
+      if (Session.role?.toLowerCase() == "teacher" &&
+          value == null) {
+        return "Required";
+      }
+
+      return null;
+    },
+  ),
+],
 
                     const SizedBox(height: 15),
 
