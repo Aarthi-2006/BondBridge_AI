@@ -8,6 +8,7 @@ import 'teacher_management/teacher_management_screen.dart';
 import 'parent_management/parent_management_screen.dart';
 import 'announcement_management/announcement_management_screen.dart';
 import 'login_screen.dart';
+import 'admin_profile_screen.dart';
 
 class AdminDashboard extends StatelessWidget {
 
@@ -119,17 +120,24 @@ class AdminDashboard extends StatelessWidget {
 
   onSelected: (value) {
 
-    if (value == "logout") {
+    if (value == "profile") {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const AdminProfileScreen(),
+    ),
+  );
+}
 
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const LoginScreen(),
-        ),
-        (route) => false,
-      );
-
-    }
+if (value == "logout") {
+  Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const LoginScreen(),
+    ),
+    (route) => false,
+  );
+}
 
   },
 

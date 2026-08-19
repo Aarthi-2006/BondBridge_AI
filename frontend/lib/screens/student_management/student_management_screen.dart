@@ -82,19 +82,39 @@ void initState() {
 }
 
 Future<void> initializeScreen() async {
-  isTeacher = Session.role == "Teacher";
-
+isTeacher = Session.role?.toString().toLowerCase() == "teacher";
   if (isTeacher) {
-    assignedClasses = ClassPermissionService.getClasses();
+  assignedClasses = ClassPermissionService.getClasses();
+}
 
-    if (assignedClasses.isNotEmpty) {
-      selectedClass = assignedClasses.first["class"];
-      selectedSection = assignedClasses.first["section"];
-    }
+await loadStudents();
+}
+List<String> get teacherClassOptions {
+  return assignedClasses
+      .map((item) => item["class"]?.toString())
+      .where((value) => value != null && value.isNotEmpty)
+      .cast<String>()
+      .toSet()
+      .toList();
+}
+
+List<String> get teacherSectionOptions {
+  if (selectedClass == null) {
+    return [];
   }
 
-  await loadStudents();
+  return assignedClasses
+      .where(
+        (item) =>
+            item["class"]?.toString() == selectedClass,
+      )
+      .map((item) => item["section"]?.toString())
+      .where((value) => value != null && value.isNotEmpty)
+      .cast<String>()
+      .toSet()
+      .toList();
 }
+
   // ==========================
 // LOAD STUDENTS
 // ==========================
@@ -104,33 +124,57 @@ Future<void> loadStudents() async {
   });
 
   if (isTeacher) {
-    // Teacher: load students only from assigned classes
-    List allStudents = [];
+  if (selectedClass == null && selectedSection == null) {
+    List allAssignedStudents = [];
 
-    for (final assignedClass in assignedClasses) {
-      final className = assignedClass["class"]?.toString();
-      final sectionName = assignedClass["section"]?.toString();
+    for (final assigned in assignedClasses) {
+      final className = assigned["class"]?.toString();
+      final sectionName = assigned["section"]?.toString();
 
-      if (className == null || sectionName == null) {
-        continue;
+      if (className != null && sectionName != null) {
+        final data = await ApiService.getStudents(
+          studentClass: className,
+          section: sectionName,
+        );
+
+        allAssignedStudents.addAll(data);
       }
-
-      final data = await ApiService.getStudents(
-        studentClass: className,
-        section: sectionName,
-      );
-
-      allStudents.addAll(data);
     }
 
     if (!mounted) return;
 
     setState(() {
-      students = allStudents;
+      students = allAssignedStudents;
       isLoading = false;
     });
-  } else {
-    // Admin: EXISTING behavior remains unchanged
+
+    return;
+  }
+
+  if (selectedClass != null && selectedSection != null) {
+    final data = await ApiService.getStudents(
+      studentClass: selectedClass,
+      section: selectedSection,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      students = data;
+      isLoading = false;
+    });
+
+    return;
+  }
+
+  setState(() {
+    isLoading = false;
+  });
+} else {
+    // ==================================================
+    // ADMIN - EXISTING BEHAVIOR
+    // ==================================================
+
     final data = await ApiService.getStudents(
       studentClass: selectedClass,
       section: selectedSection,
@@ -545,115 +589,133 @@ void dispose() {
           // ==========================
           // CLASS & SECTION FILTER
           // ==========================
-    if (!isTeacher) ...[
+    // ==========================
+// CLASS & SECTION FILTER
+// ==========================
 
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
+Padding(
+  padding: const EdgeInsets.all(12),
 
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    initialValue: selectedClass,
-                    decoration: const InputDecoration(
-                      labelText: "Class",
-                      border: OutlineInputBorder(),
-                    ),
-                    items: classes
-    .map(
-      (c) => DropdownMenuItem(
-        value: c,
-        child: Text(c),
-      ),
-    )
-    .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedClass = value;
-                      });
-                    },
-                  ),
-                ),
+  child: Row(
+    children: [
 
-                const SizedBox(width: 10),
+      // ==========================
+      // CLASS DROPDOWN
+      // ==========================
 
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    initialValue: selectedSection,
-                    decoration: const InputDecoration(
-                      labelText: "Section",
-                      border: OutlineInputBorder(),
-                    ),
-                    items: sections
-                        .map(
-                          (s) => DropdownMenuItem(
-                            value: s,
-                            child: Text(s),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedSection = value;
-                      });
-                    },
-                  ),
-                ),
+      Expanded(
+        child: DropdownButtonFormField<String>(
+          initialValue: selectedClass,
 
-              ],
-            ),
+          decoration: const InputDecoration(
+            labelText: "Class",
+            border: OutlineInputBorder(),
           ),
 
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: loadStudents,
-                    icon: const Icon(Icons.search),
-                    label: const Text("Search"),
-                  ),
+          items: (isTeacher
+                  ? teacherClassOptions
+                  : classes)
+              .map(
+                (c) => DropdownMenuItem<String>(
+                  value: c,
+                  child: Text(c),
                 ),
+              )
+              .toList(),
 
-                const SizedBox(width: 10),
+          onChanged: (value) {
+  if (value == null) return;
 
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-
-  if (isTeacher) {
-
-    if (assignedClasses.isNotEmpty) {
-
-      setState(() {
-        selectedClass = assignedClasses.first["class"];
-        selectedSection = assignedClasses.first["section"];
-      });
-
-    }
-
-  } else {
-
-    setState(() {
-      selectedClass = null;
-      selectedSection = null;
-    });
-
-  }
-
-  await loadStudents();
+  setState(() {
+    selectedClass = value;
+    selectedSection = null;
+  });
 },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text("Show All"),
-                  ),
-                ),
+        ),
+      ),
 
-              ],
-            ),
+      const SizedBox(width: 10),
+
+      // ==========================
+      // SECTION DROPDOWN
+      // ==========================
+
+      Expanded(
+        child: DropdownButtonFormField<String>(
+          initialValue: selectedSection,
+
+          decoration: const InputDecoration(
+            labelText: "Section",
+            border: OutlineInputBorder(),
           ),
+
+          items: (isTeacher
+                  ? teacherSectionOptions
+                  : sections)
+              .map(
+                (s) => DropdownMenuItem<String>(
+                  value: s,
+                  child: Text(s),
+                ),
+              )
+              .toList(),
+
+          onChanged: (value){
+            setState(() {
+              selectedSection = value;
+            });
+
+          },
+        ),
+      ),
     ],
+  ),
+),
+
+// ==========================
+// SEARCH / RESET BUTTONS
+// ==========================
+
+Padding(
+  padding: const EdgeInsets.symmetric(horizontal: 12),
+
+  child: Row(
+    children: [
+
+      // SEARCH BUTTON
+      Expanded(
+        child: ElevatedButton.icon(
+          onPressed: loadStudents,
+
+          icon: const Icon(Icons.search),
+
+          label: const Text("Search"),
+        ),
+      ),
+
+      const SizedBox(width: 10),
+
+      // RESET / SHOW ALL BUTTON
+      Expanded(
+        child: OutlinedButton.icon(
+         onPressed: () {
+  setState(() {
+    selectedClass = null;
+    selectedSection = null;
+  });
+
+  loadStudents();
+},
+          icon: const Icon(Icons.refresh),
+
+          label: Text(
+            isTeacher ? "Reset" : "Show All",
+          ),
+        ),
+      ),
+    ],
+  ),
+),
           const SizedBox(height: 10),
 
           Card(

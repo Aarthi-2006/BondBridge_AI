@@ -75,15 +75,21 @@ Session.fullName = result["user"]["full_name"];
 
         } else if (role == "teacher") {
 
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => TeacherDashboard(  
-teacherName: result["user"]?["full_name"]?.toString() ?? "Teacher",),
-            ),
-          );
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => TeacherDashboard(
+        teacherName:
+            result["user"]?["full_name"]?.toString() ?? "Teacher",
 
-        } else if (role == "student") {
+        teacherEmail:
+            emailController.text.trim(),
+      ),
+    ),
+  );
+
+}
+        else if (role == "student") {
 
           Navigator.pushReplacement(
             context,

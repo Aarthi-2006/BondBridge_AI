@@ -74,3 +74,50 @@ def login():
             "message": str(e)
 
         }), 500
+@auth.route("/admin/profile", methods=["GET"])
+def admin_profile():
+
+    try:
+
+        conn = get_connection()
+
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+        SELECT
+            user_id,
+            full_name,
+            email,
+            role,
+            created_at
+        FROM users
+        WHERE role = 'Admin'
+        LIMIT 1
+        """
+
+        cursor.execute(query)
+
+        admin = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if admin:
+
+            return jsonify({
+                "success": True,
+                "admin": admin
+            })
+
+        return jsonify({
+            "success": False,
+            "message": "Admin not found"
+        }), 404
+
+
+    except Exception as e:
+
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500

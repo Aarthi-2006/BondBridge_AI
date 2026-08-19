@@ -615,6 +615,73 @@ static Future<List<dynamic>> getTeacherClasses(
 
 }
 
+// ======================================
+// GET TEACHER PROFILE
+// ======================================
+
+static Future<Map<String, dynamic>> getTeacherProfile(
+    int teacherId) async {
+
+  try {
+
+    final response = await http.get(
+      Uri.parse(
+        "$baseUrl/teachers/$teacherId",
+      ),
+    );
+
+    if (response.statusCode == 200) {
+
+      return jsonDecode(response.body);
+
+    }
+
+    return {
+      "success": false,
+      "message": "Failed to load teacher profile",
+    };
+
+  } catch (e) {
+
+    return {
+      "success": false,
+      "message": "Unable to connect to server",
+    };
+
+  }
+}
+// ======================================
+// GET ADMIN PROFILE
+// ======================================
+
+static Future<Map<String, dynamic>> getAdminProfile() async {
+
+  try {
+
+    final response = await http.get(
+      Uri.parse("$baseUrl/admin/profile"),
+    );
+
+    if (response.statusCode == 200) {
+
+      return jsonDecode(response.body);
+
+    }
+
+    return {
+      "success": false,
+      "message": "Failed to load admin profile",
+    };
+
+  } catch (e) {
+
+    return {
+      "success": false,
+      "message": "Unable to connect to server",
+    };
+
+  }
+}
   // =====================================================
 // GET PARENTS
 // =====================================================

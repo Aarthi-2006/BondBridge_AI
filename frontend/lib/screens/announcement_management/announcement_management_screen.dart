@@ -433,14 +433,19 @@ Future<void> loadTeacherClasses() async {
     return Scaffold(
 
       appBar: AppBar(
+  backgroundColor: Colors.blue,
 
-        backgroundColor: Colors.blue,
+  leading: IconButton(
+    icon: const Icon(Icons.arrow_back),
+    onPressed: () {
+      Navigator.pop(context);
+    },
+  ),
 
-        title: const Text(
-          "Announcement Management",
-        ),
-
-      ),
+  title: const Text(
+    "Announcement Management",
+  ),
+),
 
       floatingActionButton: FloatingActionButton(
 

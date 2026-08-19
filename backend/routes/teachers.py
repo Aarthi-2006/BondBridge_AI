@@ -79,6 +79,67 @@ def get_teachers():
             "error": str(e)
 
         }), 500
+
+
+# ==========================
+# GET SINGLE TEACHER PROFILE
+# ==========================
+
+@teachers.route("/teachers/<int:id>", methods=["GET"])
+def get_teacher_profile(id):
+
+    try:
+
+        connection = get_connection()
+
+        cursor = connection.cursor(dictionary=True)
+
+        query = """
+        SELECT
+            t.teacher_id,
+            u.full_name,
+            u.email,
+            t.employee_id,
+            t.subject,
+            t.qualification,
+            t.experience,
+            t.phone_number,
+            t.gender,
+            t.date_of_birth,
+            t.joining_date
+
+        FROM teachers t
+
+        JOIN users u
+        ON t.user_id = u.user_id
+
+        WHERE t.teacher_id = %s
+        """
+
+        cursor.execute(query, (id,))
+
+        teacher = cursor.fetchone()
+
+        cursor.close()
+        connection.close()
+
+        if teacher is None:
+            return jsonify({
+                "success": False,
+                "message": "Teacher not found"
+            }), 404
+
+        return jsonify({
+            "success": True,
+            "teacher": teacher
+        }), 200
+
+    except Exception as e:
+
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
         # ==========================
 # ADD TEACHER
 # ==========================
