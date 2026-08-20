@@ -2,7 +2,28 @@ from flask import Blueprint, request, jsonify
 from database import get_connection
 
 marks_bp = Blueprint("marks", __name__)
+# =========================================================
+# CHECK TEACHER CLASS/SECTION PERMISSION
+# =========================================================
 
+def teacher_has_class_permission(cursor, teacher_id, student_id):
+    query = """
+        SELECT 1
+        FROM students s
+        INNER JOIN class_teacher_assignment cta
+            ON cta.class = s.class
+            AND cta.section = s.section
+        WHERE s.student_id = %s
+          AND cta.teacher_id = %s
+        LIMIT 1
+    """
+
+    cursor.execute(
+        query,
+        (student_id, teacher_id)
+    )
+
+    return cursor.fetchone() is not None
 
 # =========================================================
 # GET MARKS
@@ -22,7 +43,7 @@ def get_marks():
     teacher_id = request.args.get("teacher_id")
     student_class = request.args.get("class")
     section = request.args.get("section")
-
+    assessment_type = request.args.get("assessment_type")
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -74,9 +95,16 @@ def get_marks():
     # ==========================================
 
     if teacher_id:
-        query += " AND m.teacher_id = %s"
+        conditions.append("""
+            EXISTS (
+              SELECT 1
+              FROM class_teacher_assignment cta
+              WHERE cta.teacher_id = %s
+                AND cta.class = s.class
+                AND cta.section = s.section
+            )
+        """)
         values.append(teacher_id)
-
     # ==========================================
     # CLASS FILTER
     # ==========================================
@@ -92,7 +120,13 @@ def get_marks():
     if section:
         conditions.append("s.section = %s")
         values.append(section)
+    # ==========================================
+# ASSESSMENT TYPE FILTER
+# ==========================================
 
+    if assessment_type:
+        conditions.append("m.assessment_type = %s")
+        values.append(assessment_type)
     # ==========================================
     # WHERE
     # ==========================================
@@ -189,8 +223,23 @@ def add_marks():
         }), 400
 
     conn = get_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
 
+# =========================================================
+# TEACHER CLASS/SECTION PERMISSION CHECK
+# =========================================================
+
+    if not teacher_has_class_permission(
+      cursor,
+      teacher_id,
+      student_id
+    ):
+      cursor.close()
+      conn.close()
+
+      return jsonify({
+         "error": "You are not assigned to this student's class and section."
+      }), 403
     query = """
         INSERT INTO marks (
             student_id,

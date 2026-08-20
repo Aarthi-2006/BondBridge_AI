@@ -1,330 +1,602 @@
 import 'package:flutter/material.dart';
-
 import '../services/api_service.dart';
-import '../services/class_permission_service.dart';
 import '../services/session.dart';
-
 class MarksScreen extends StatefulWidget {
-  const MarksScreen({super.key});
+  const MarksScreen({
+    super.key,
+    this.initialPage = "Management",
+  });
+
+  final String initialPage;
+
+  static const Color primaryBlue = Color(0xff1F4FB8);
 
   @override
   State<MarksScreen> createState() => _MarksScreenState();
 }
 
 class _MarksScreenState extends State<MarksScreen> {
-
-  //=====================================================
-  // DROPDOWN VALUES
-  //=====================================================
+  // ===========================================================
+  // CLASS / SECTION / STUDENT DATA
+  // ===========================================================
 
   String? selectedClass;
   String? selectedSection;
-  String? selectedStudentId;
-  String? selectedSubject;
-  String? selectedAssessmentType;
-  String? selectedAcademicYear;
+  int? selectedStudentId;
 
-  DateTime? selectedAssessmentDate;
+  List<dynamic> students = [];
 
-  //=====================================================
-  // CONTROLLERS
-  //=====================================================
+  bool isLoadingStudents = false;
+  // ===========================================================
+// TEACHER ASSIGNED CLASSES
+// ===========================================================
 
-  final TextEditingController assessmentNameController =
-      TextEditingController();
+List<Map<String, String>> assignedClasses = [];
+bool isLoadingAssignedClasses = false;
+  // ===========================================================
+// VIEW MARKS DATA
+// ===========================================================
 
-  final TextEditingController totalMarksController =
-      TextEditingController();
+List<dynamic> viewMarks = [];
 
-  final TextEditingController obtainedMarksController =
-      TextEditingController();
+bool isLoadingMarks = false;
+bool marksLoaded = false;
 
-  final TextEditingController remarksController =
-      TextEditingController();
+  // ===========================================================
+  // ASSESSMENT
+  // ===========================================================
 
-  //=====================================================
-  // DATA
-  //=====================================================
+  String selectedAssessment = "Monthly";
 
-  List students = [];
-
-  bool isLoading = false;
-  List viewMarks = [];
-  String selectedPage = "Add Marks";
-
-  //=====================================================
-  // CLASSES
-  //=====================================================
-
-  final List<String> allClasses = [
-
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "10",
-    "11",
-    "12",
-
-  ];
-
-  //=====================================================
-  // SECTIONS
-  //=====================================================
-
-  final List<String> allSections = [
-
-    "A",
-    "B",
-    "C",
-    "D",
-
-  ];
-
-  //=====================================================
-  // ASSESSMENT TYPES
-  //=====================================================
-
-  final List<String> assessmentTypes = [
-
-    "Daily Test",
-    "Weekly Test",
-    "Assignment",
-    "Monthly Test",
-    "Quarterly Exam",
-    "Half-Yearly Exam",
-    "Annual Exam",
-
-  ];
-
-  //=====================================================
-  // ACADEMIC YEARS
-  //=====================================================
-
-  final List<String> academicYears = [
-
-    "2025-2026",
-    "2026-2027",
-    "2027-2028",
-
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    loadPermissions();
-  }
-
-  //=====================================================
-  // LOAD PERMISSIONS
-  //=====================================================
-
-  Future<void> loadPermissions() async {
-
-    if (Session.role == "teacher") {
-
-      await ClassPermissionService.loadPermissions();
-
-      if (mounted) {
-        setState(() {});
-      }
-    }
-  }
-
-  //=====================================================
-  // AVAILABLE CLASSES
-  //=====================================================
-
-  List<String> getAvailableClasses() {
-
-    if (Session.role == "admin") {
-      return allClasses;
-    }
-
-    return ClassPermissionService.getClasses()
-        .map((item) => item["class"].toString())
-        .toSet()
-        .toList();
-  }
-
-  //=====================================================
-  // AVAILABLE SECTIONS
-  //=====================================================
-
-  List<String> getAvailableSections() {
-
-    if (Session.role == "admin") {
-      return allSections;
-    }
-
-    if (selectedClass == null) {
-      return [];
-    }
-
-    return ClassPermissionService.getClasses()
-        .where(
-          (item) =>
-              item["class"].toString() ==
-              selectedClass,
-        )
-        .map(
-          (item) =>
-              item["section"].toString(),
-        )
-        .toSet()
-        .toList();
-  }
-
-  //=====================================================
+  // ===========================================================
   // SUBJECTS
-  //=====================================================
+  // ===========================================================
 
-  List<String> getAvailableSubjects() {
+  List<String> get subjects {
+  final classNumber = int.tryParse(selectedClass ?? "");
 
-    if (selectedClass == null) {
-      return [];
-    }
-
-    final classNumber =
-        int.tryParse(selectedClass!);
-
-    if (classNumber == null) {
-      return [];
-    }
-
-    // Classes 1-10
-
-    if (classNumber >= 1 &&
-        classNumber <= 10) {
-
-      return [
-
-        "Tamil",
-        "English",
-        "Mathematics",
-        "Science",
-        "Social Science",
-
-      ];
-    }
-
-    // Classes 11-12
-
+  if (classNumber != null && classNumber >= 11) {
     return [
-
       "Tamil",
       "English",
       "Mathematics",
-      "Physics",
-      "Chemistry",
       "Biology",
-
+      "Chemistry",
+      "Physics",
     ];
   }
 
-  //=====================================================
-  // AUTO MAXIMUM MARKS
-  //=====================================================
+  return [
+    "Tamil",
+    "English",
+    "Mathematics",
+    "Science",
+    "Social Science",
+  ];
+}
 
-  void setDefaultMaximumMarks(
-      String assessmentType) {
+  // ===========================================================
+  // MARK CONTROLLERS
+  // ===========================================================
 
-    switch (assessmentType) {
+  final Map<String, TextEditingController> markControllers = {};
 
-      case "Daily Test":
-        totalMarksController.text = "10";
-        break;
+  @override
+void initState() {
+  super.initState();
 
-      case "Weekly Test":
-        totalMarksController.text = "25";
-        break;
-
-      case "Assignment":
-        totalMarksController.text = "20";
-        break;
-
-      case "Monthly Test":
-        totalMarksController.text = "50";
-        break;
-
-      case "Quarterly Exam":
-        totalMarksController.text = "100";
-        break;
-
-      case "Half-Yearly Exam":
-        totalMarksController.text = "100";
-        break;
-
-      case "Annual Exam":
-        totalMarksController.text = "100";
-        break;
-
-      default:
-        totalMarksController.clear();
+  _loadAssignedClasses();
+}
+void _initializeMarkControllers() {
+  for (final subject in subjects) {
+    if (!markControllers.containsKey(subject)) {
+      markControllers[subject] = TextEditingController();
     }
   }
-    //=====================================================
-  // LOAD STUDENTS
-  //=====================================================
+}
 
-  Future<void> loadStudents() async {
-
-    if (selectedClass == null ||
-        selectedSection == null) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Please select Class and Section.",
-          ),
-        ),
-      );
-
-      return;
+  @override
+  void dispose() {
+    for (final controller in markControllers.values) {
+      controller.dispose();
     }
 
-    // Teacher Permission Check
+    super.dispose();
+  }
 
-    if (Session.role == "teacher") {
+  // ===========================================================
+  // BUILD
+  // ===========================================================
 
-      final allowed =
-          ClassPermissionService.isAssigned(
-        selectedClass!,
-        selectedSection!,
-      );
+  @override
+  Widget build(BuildContext context) {
+    // =========================================================
+    // ENTER MARKS
+    // =========================================================
 
-      if (!allowed) {
+    if (widget.initialPage == "Enter Marks") {
+      return _buildEnterMarksPage(context);
+    }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "You are not assigned to this class.",
-            ),
+    // =========================================================
+    // VIEW MARKS
+    // =========================================================
+
+    if (widget.initialPage == "View Marks") {
+      return _buildViewMarksPage(context);
+    }
+
+    // =========================================================
+    // MANAGEMENT
+    // =========================================================
+
+    return _buildManagementPage(context);
+  }
+
+  // ===========================================================
+  // MANAGEMENT PAGE
+  // ===========================================================
+
+  Widget _buildManagementPage(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xffF5F7FB),
+
+      appBar: AppBar(
+        backgroundColor: MarksScreen.primaryBlue,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+
+        title: const Text(
+          "Marks Management",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
           ),
-        );
+        ),
+      ),
 
-        return;
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 10),
+
+              const Text(
+                "Manage Student Marks",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              const Text(
+                "Enter new marks or view previously entered marks.",
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey,
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              // =================================================
+              // ENTER MARKS
+              // =================================================
+
+              _buildManagementCard(
+                context: context,
+                icon: Icons.edit_note,
+                title: "Enter Marks",
+                subtitle: "Enter and manage student marks",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MarksScreen(
+                        initialPage: "Enter Marks",
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 18),
+
+              // =================================================
+              // VIEW MARKS
+              // =================================================
+
+              _buildManagementCard(
+                context: context,
+                icon: Icons.visibility_outlined,
+                title: "View Marks",
+                subtitle: "View student marks and performance",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MarksScreen(
+                        initialPage: "View Marks",
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ===========================================================
+  // ENTER MARKS PAGE
+  // ===========================================================
+
+  Widget _buildEnterMarksPage(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xffF5F7FB),
+
+      appBar: AppBar(
+        backgroundColor: MarksScreen.primaryBlue,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+
+        title: const Text(
+          "Enter Marks",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // =================================================
+              // TITLE
+              // =================================================
+
+              const Text(
+                "Enter Student Marks",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              const Text(
+                "Select class and section, then load the students.",
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey,
+                ),
+              ),
+
+              const SizedBox(height: 25),
+
+              // =================================================
+              // CLASS + SECTION
+              // =================================================
+
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _buildDropdownField(
+                      label: "Class",
+                      hint: "Select Class",
+                      value: selectedClass,
+                      items: assignedClasses
+    .map((item) => item["class"]!)
+    .toSet()
+    .toList(),
+                     onChanged: (value) {
+  setState(() {
+    selectedClass = value;
+    selectedSection = null;
+    selectedStudentId = null;
+    students = [];
+
+    _initializeMarkControllers();
+  });
+},
+                    ),
+                  ),
+
+                  const SizedBox(width: 15),
+
+                  Expanded(
+  child: _buildDropdownField(
+    label: "Section",
+    hint: selectedClass == null
+        ? "Select Class First"
+        : "Select Section",
+    value: selectedSection,
+    items: assignedClasses
+        .where(
+          (item) => item["class"] == selectedClass,
+        )
+        .map((item) => item["section"]!)
+        .toSet()
+        .toList(),
+    onChanged: selectedClass == null
+        ? (_) {}
+        : (value) {
+            setState(() {
+              selectedSection = value;
+              selectedStudentId = null;
+              students = [];
+            });
+          },
+  ),
+),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // =================================================
+              // LOAD STUDENTS
+              // =================================================
+
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+
+                child: ElevatedButton.icon(
+                  onPressed: isLoadingStudents
+                      ? null
+                      : _loadStudents,
+
+                  icon: isLoadingStudents
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.people_alt_outlined,
+                        ),
+
+                  label: Text(
+                    isLoadingStudents
+                        ? "Loading Students..."
+                        : "Load Students",
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: MarksScreen.primaryBlue,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor:
+                        MarksScreen.primaryBlue.withValues(alpha: 0.6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 25),
+
+              // =================================================
+              // STUDENT DROPDOWN
+              // =================================================
+
+              _buildStudentDropdown(),
+
+              const SizedBox(height: 30),
+
+              // =================================================
+              // ASSESSMENT
+              // =================================================
+
+              const Text(
+                "Assessment",
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _buildAssessmentButton("Monthly"),
+                  _buildAssessmentButton("Quarterly"),
+                  _buildAssessmentButton("Half Yearly"),
+                  _buildAssessmentButton("Annual"),
+                ],
+              ),
+
+              const SizedBox(height: 30),
+
+              // =================================================
+              // SUBJECT MARKS
+              // =================================================
+
+              const Text(
+                "Subject Marks",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+
+              const SizedBox(height: 15),
+
+              ...subjects.map(
+                (subject) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildSubjectMarkField(subject),
+                ),
+              ),
+
+              const SizedBox(height: 13),
+
+              // =================================================
+              // SAVE
+              // =================================================
+
+              SizedBox(
+  width: double.infinity,
+  height: 52,
+
+  child: ElevatedButton.icon(
+    onPressed: _saveMarks,
+
+    icon: const Icon(Icons.save_outlined),
+
+    label: const Text(
+      "Save Marks",
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+
+    style: ElevatedButton.styleFrom(
+      backgroundColor: MarksScreen.primaryBlue,
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+    ),
+  ),
+),
+
+              const SizedBox(height: 30),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+// ===========================================================
+// LOAD TEACHER ASSIGNED CLASSES
+// ===========================================================
+
+Future<void> _loadAssignedClasses() async {
+  if (Session.teacherId == null) {
+    return;
+  }
+
+  setState(() {
+    isLoadingAssignedClasses = true;
+  });
+
+  try {
+    final result = await ApiService.getTeacherClasses(
+      Session.teacherId!,
+    );
+
+    if (!mounted) return;
+
+    final List<Map<String, String>> loadedClasses = [];
+
+    for (final item in result) {
+      if (item is Map<String, dynamic>) {
+        final className =
+            item["class"]?.toString() ??
+            item["class_name"]?.toString() ??
+            "";
+
+        final section =
+            item["section"]?.toString() ?? "";
+
+        if (className.isNotEmpty && section.isNotEmpty) {
+          loadedClasses.add({
+            "class": className,
+            "section": section,
+          });
+        }
       }
     }
 
     setState(() {
+      assignedClasses = loadedClasses;
+      isLoadingAssignedClasses = false;
+    });
+  } catch (e) {
+    if (!mounted) return;
 
-      isLoading = true;
+    setState(() {
+      isLoadingAssignedClasses = false;
+      assignedClasses = [];
+    });
+
+    _showMessage(
+      "Unable to load your assigned classes.",
+    );
+  }
+}
+  // ===========================================================
+  // LOAD REAL STUDENTS
+  // ===========================================================
+
+  Future<void> _loadStudents() async {
+    if (selectedClass == null || selectedSection == null) {
+      _showMessage(
+        "Please select Class and Section first.",
+      );
+      return;
+    }
+
+    setState(() {
+      isLoadingStudents = true;
       students = [];
       selectedStudentId = null;
-
     });
 
     try {
-
-      final result =
-          await ApiService.getStudents(
-
+      final result = await ApiService.getStudents(
         studentClass: selectedClass,
         section: selectedSection,
 
@@ -333,1225 +605,1405 @@ class _MarksScreenState extends State<MarksScreen> {
       if (!mounted) return;
 
       setState(() {
-
         students = result;
-        isLoading = false;
-
+        isLoadingStudents = false;
       });
 
+      if (students.isEmpty) {
+        _showMessage(
+          "No students found for Class $selectedClass - Section $selectedSection.",
+        );
+      } else {
+        _showMessage(
+          "${students.length} student(s) loaded.",
+        );
+      }
     } catch (e) {
-
       if (!mounted) return;
 
       setState(() {
-
-        isLoading = false;
-
+        isLoadingStudents = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-
-        SnackBar(
-          content: Text(
-            "Failed to load students\n$e",
-          ),
-        ),
-
+      _showMessage(
+        "Unable to load students.",
       );
     }
   }
 
+// ===========================================================
+// LOAD MARKS
+// ===========================================================
 
-//=====================================================
-// LOAD VIEW MARKS
-//=====================================================
-
-Future<void> loadViewMarks() async {
-
-  if (selectedClass == null || selectedSection == null) {
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Please select Class and Section."),
-      ),
+Future<void> _loadMarks() async {
+  if (selectedClass == null) {
+    _showMessage(
+      "Please select a class.",
     );
+    return;
+  }
 
+  if (selectedSection == null) {
+    _showMessage(
+      "Please select a section.",
+    );
     return;
   }
 
   setState(() {
-    isLoading = true;
+    isLoadingMarks = true;
+    marksLoaded = false;
     viewMarks = [];
   });
 
   try {
-
     final result = await ApiService.getMarks(
   studentClass: selectedClass!,
   section: selectedSection!,
+  assessmentType: selectedAssessment,
+  teacherId: Session.teacherId,
 );
-
-if (!mounted) return;
-
-setState(() {
-  viewMarks = result;
-});
-  } catch (e) {
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Failed to load marks\n$e"),
-      ),
-    );
-
-  } finally {
-
-    if (mounted) {
-      setState(() {
-        isLoading = false;
-      });
-    }
-
-  }
-
-}
-  //=====================================================
-  // VALIDATION
-  //=====================================================
-
-  bool validateMarks() {
-
-    if (selectedStudentId == null) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Please select a student.",
-          ),
-        ),
-      );
-
-      return false;
-    }
-
-    if (selectedSubject == null) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Please select a subject.",
-          ),
-        ),
-      );
-
-      return false;
-    }
-
-    if (selectedAssessmentType == null) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Please select assessment type.",
-          ),
-        ),
-      );
-
-      return false;
-    }
-
-    if (assessmentNameController.text
-        .trim()
-        .isEmpty) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Enter assessment name.",
-          ),
-        ),
-      );
-
-      return false;
-    }
-
-    if (selectedAssessmentDate == null) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Select assessment date.",
-          ),
-        ),
-      );
-
-      return false;
-    }
-
-    if (selectedAcademicYear == null) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Select academic year.",
-          ),
-        ),
-      );
-
-      return false;
-    }
-
-    final totalMarks =
-        double.tryParse(
-      totalMarksController.text.trim(),
-    );
-
-    final obtainedMarks =
-        double.tryParse(
-      obtainedMarksController.text.trim(),
-    );
-
-    if (totalMarks == null ||
-        totalMarks <= 0) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Invalid maximum marks.",
-          ),
-        ),
-      );
-
-      return false;
-    }
-
-    if (obtainedMarks == null) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Invalid obtained marks.",
-          ),
-        ),
-      );
-
-      return false;
-    }
-
-    if (obtainedMarks > totalMarks) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "Marks cannot exceed $totalMarks",
-          ),
-        ),
-      );
-
-      return false;
-    }
-
-    return true;
-  }
-
-  //=====================================================
-  // SAVE MARKS
-  //=====================================================
-
-  Future<void> saveMarks() async {
-
-    if (!validateMarks()) {
-      return;
-    }
-
-    if (Session.teacherId == null) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Teacher not found. Login again.",
-          ),
-        ),
-      );
-
-      return;
-    }
-
     setState(() {
-
-      isLoading = true;
-
+      viewMarks = result;
+      isLoadingMarks = false;
+      marksLoaded = true;
     });
 
-    try {
+    if (viewMarks.isEmpty) {
+      _showMessage(
+        "No marks found for Class $selectedClass - Section $selectedSection.",
+      );
+    } else {
+      _showMessage(
+        "${viewMarks.length} mark record(s) loaded.",
+      );
+    }
+  } catch (e) {
+    if (!mounted) return;
+
+    setState(() {
+      isLoadingMarks = false;
+      marksLoaded = true;
+      viewMarks = [];
+    });
+
+    _showMessage(
+      "Unable to load marks.",
+    );
+  }
+}
+  // ===========================================================
+// SAVE MARKS
+// ===========================================================
+
+// ===========================================================
+// SAVE MARKS
+// ===========================================================
+
+Future<void> _saveMarks() async {
+  // ---------------------------------------------------------
+  // CHECK CLASS
+  // ---------------------------------------------------------
+
+  if (selectedClass == null) {
+    _showMessage(
+      "Please select a class.",
+    );
+    return;
+  }
+
+  // ---------------------------------------------------------
+  // CHECK SECTION
+  // ---------------------------------------------------------
+
+  if (selectedSection == null) {
+    _showMessage(
+      "Please select a section.",
+    );
+    return;
+  }
+
+  // ---------------------------------------------------------
+  // CHECK STUDENT
+  // ---------------------------------------------------------
+
+  if (selectedStudentId == null) {
+    _showMessage(
+      "Please select a student.",
+    );
+    return;
+  }
+
+  // ---------------------------------------------------------
+  // CHECK TEACHER
+  // ---------------------------------------------------------
+
+  if (Session.teacherId == null) {
+    _showMessage(
+      "Teacher session not found. Please login again.",
+    );
+    return;
+  }
+
+  // ---------------------------------------------------------
+  // CHECK ALL SUBJECT MARKS
+  // ---------------------------------------------------------
+
+  final Map<String, double> enteredMarks = {};
+
+  for (final subject in subjects) {
+    final text = markControllers[subject]!.text.trim();
+
+    // Every subject is required.
+    if (text.isEmpty) {
+      _showMessage(
+        "Please enter marks for $subject.",
+      );
+      return;
+    }
+
+    final double? mark = double.tryParse(text);
+
+    if (mark == null) {
+      _showMessage(
+        "Please enter a valid number for $subject.",
+      );
+      return;
+    }
+
+    if (mark < 0 || mark > 100) {
+      _showMessage(
+        "$subject marks must be between 0 and 100.",
+      );
+      return;
+    }
+
+    enteredMarks[subject] = mark;
+  }
+
+  // ---------------------------------------------------------
+  // SHOW LOADING
+  // ---------------------------------------------------------
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    },
+  );
+
+  try {
+    int savedCount = 0;
+
+    // -------------------------------------------------------
+    // SAVE ALL SIX SUBJECTS
+    // -------------------------------------------------------
+
+    for (final subject in subjects) {
+      final double marksObtained = enteredMarks[subject]!;
 
       await ApiService.addMarks(
+        studentId: selectedStudentId!,
+        teacherId: Session.teacherId!,
+        subject: subject,
 
-        studentId:
-            int.parse(selectedStudentId!),
+        // Example:
+        // Monthly
+        // Quarterly
+        // Half Yearly
+        // Annual
+        assessmentType: selectedAssessment,
 
-        teacherId:
-            Session.teacherId!,
+        // This represents that these are exam marks.
+        assessmentCategory: "Exam",
 
-        subject:
-            selectedSubject!,
-
-        assessmentType:
-            selectedAssessmentType!,
-
-        assessmentCategory:
-            selectedAssessmentType!,
-
-        assessmentName:
-            assessmentNameController.text.trim(),
+        // Example:
+        // Monthly
+        // Quarterly
+        // Half Yearly
+        // Annual
+        assessmentName: selectedAssessment,
 
         assessmentDate:
-            "${selectedAssessmentDate!.year}-"
-            "${selectedAssessmentDate!.month.toString().padLeft(2, '0')}-"
-            "${selectedAssessmentDate!.day.toString().padLeft(2, '0')}",
+            DateTime.now().toIso8601String().split("T").first,
 
         academicYear:
-            selectedAcademicYear!,
+            "${DateTime.now().year}-${DateTime.now().year + 1}",
 
-        marksObtained:
-            double.parse(
-          obtainedMarksController.text,
-        ),
+        marksObtained: marksObtained,
 
-        totalMarks:
-            double.parse(
-          totalMarksController.text,
-        ),
+        // Every subject is currently out of 100.
+        totalMarks: 100,
 
-        teacherRemarks:
-            remarksController.text.trim(),
-
+        teacherRemarks: null,
       );
 
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Marks saved successfully.",
-          ),
-        ),
-      );
-
-      clearForm();
-
-    } catch (e) {
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-
-        SnackBar(
-          content: Text(
-            "Failed to save marks\n$e",
-          ),
-        ),
-
-      );
-
+      savedCount++;
     }
 
-    if (mounted) {
+    // -------------------------------------------------------
+    // CLOSE LOADING
+    // -------------------------------------------------------
 
-      setState(() {
+    if (!mounted) return;
 
-        isLoading = false;
+    Navigator.pop(context);
 
-      });
+    // -------------------------------------------------------
+    // SUCCESS MESSAGE
+    // -------------------------------------------------------
 
-    }
-  }
+    _showMessage(
+      "$selectedAssessment marks saved successfully for all $savedCount subjects.",
+    );
 
-  //=====================================================
-  // CLEAR FORM
-  //=====================================================
-
-  void clearForm() {
-
-    assessmentNameController.clear();
-
-    totalMarksController.clear();
-
-    obtainedMarksController.clear();
-
-    remarksController.clear();
+    // -------------------------------------------------------
+    // CLEAR MARKS
+    // -------------------------------------------------------
 
     setState(() {
-
-      selectedStudentId = null;
-      selectedSubject = null;
-      selectedAssessmentType = null;
-      selectedAcademicYear = null;
-      selectedAssessmentDate = null;
-
+      for (final controller in markControllers.values) {
+        controller.clear();
+      }
     });
+  } catch (e) {
+    // -------------------------------------------------------
+    // CLOSE LOADING
+    // -------------------------------------------------------
+
+    if (!mounted) return;
+
+    Navigator.pop(context);
+
+    _showMessage(
+      "Failed to save $selectedAssessment marks. Please try again.",
+    );
   }
+}
 
+  // ===========================================================
+  // STUDENT DROPDOWN
+  // ===========================================================
 
-  Widget _markRow(String label, String value) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 5),
-    child: Row(
+  Widget _buildStudentDropdown() {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const Text(
+          "Student",
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
 
-        SizedBox(
-          width: 110,
+        const SizedBox(height: 8),
+
+        DropdownButtonFormField<int>(
+          initialValue: selectedStudentId,
+
+          decoration: InputDecoration(
+            hintText: students.isEmpty
+                ? "Load students first"
+                : "Select Student",
+
+            filled: true,
+            fillColor: Colors.white,
+
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 15,
+            ),
+
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Colors.grey.shade300,
+              ),
+            ),
+
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Colors.grey.shade300,
+              ),
+            ),
+
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: MarksScreen.primaryBlue,
+                width: 2,
+              ),
+            ),
+          ),
+
+          items: students.map<DropdownMenuItem<int>>((student) {
+            final int id = _getStudentId(student);
+            final String name = _getStudentName(student);
+
+            return DropdownMenuItem<int>(
+              value: id,
+              child: Text(name),
+            );
+          }).toList(),
+
+          onChanged: students.isEmpty
+              ? null
+              : (value) {
+                  setState(() {
+                    selectedStudentId = value;
+                  });
+                },
+        ),
+      ],
+    );
+  }
+
+  // ===========================================================
+  // GET STUDENT ID
+  // ===========================================================
+
+  int _getStudentId(dynamic student) {
+    if (student is Map<String, dynamic>) {
+      return int.tryParse(
+            student["student_id"]?.toString() ?? "",
+          ) ??
+          int.tryParse(
+            student["id"]?.toString() ?? "",
+          ) ??
+          0;
+    }
+
+    return 0;
+  }
+
+  // ===========================================================
+  // GET STUDENT NAME
+  // ===========================================================
+
+  String _getStudentName(dynamic student) {
+    if (student is Map<String, dynamic>) {
+      return student["full_name"]?.toString() ??
+          student["name"]?.toString() ??
+          "Student";
+    }
+
+    return "Student";
+  }
+
+  // ===========================================================
+  // DROPDOWN FIELD
+  // ===========================================================
+
+  Widget _buildDropdownField({
+    required String label,
+    required String hint,
+    required String? value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        DropdownButtonFormField<String>(
+          initialValue: value,
+
+          decoration: InputDecoration(
+            hintText: hint,
+
+            filled: true,
+            fillColor: Colors.white,
+
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 15,
+            ),
+
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Colors.grey.shade300,
+              ),
+            ),
+
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Colors.grey.shade300,
+              ),
+            ),
+
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: MarksScreen.primaryBlue,
+                width: 2,
+              ),
+            ),
+          ),
+
+          items: items.map((item) {
+            return DropdownMenuItem<String>(
+              value: item,
+              child: Text(item),
+            );
+          }).toList(),
+
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+
+  // ===========================================================
+  // ASSESSMENT BUTTON
+  // ===========================================================
+
+  Widget _buildAssessmentButton(String title) {
+    final bool selected = selectedAssessment == title;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+
+      onTap: () {
+        setState(() {
+          selectedAssessment = title;
+        });
+      },
+
+      child: Container(
+        decoration: BoxDecoration(
+          color: selected
+              ? MarksScreen.primaryBlue
+              : Colors.white,
+
+          borderRadius: BorderRadius.circular(10),
+
+          border: Border.all(
+            color: selected
+                ? MarksScreen.primaryBlue
+                : Colors.grey.shade300,
+          ),
+        ),
+
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 18,
+            vertical: 12,
+          ),
+
           child: Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
+            title,
+            style: TextStyle(
+              color: selected
+                  ? Colors.white
+                  : Colors.black87,
+
+              fontSize: 14,
+
+              fontWeight: FontWeight.bold,
             ),
           ),
         ),
+      ),
+    );
+  }
 
-        Expanded(
-          child: Text(value),
+  // ===========================================================
+// VIEW ASSESSMENT BUTTON
+// ===========================================================
+
+Widget _buildViewAssessmentButton(String title) {
+  final bool selected = selectedAssessment == title;
+
+  return InkWell(
+    borderRadius: BorderRadius.circular(10),
+
+    onTap: () {
+      setState(() {
+        selectedAssessment = title;
+        viewMarks = [];
+        marksLoaded = false;
+      });
+    },
+
+    child: Container(
+      decoration: BoxDecoration(
+        color: selected
+            ? MarksScreen.primaryBlue
+            : Colors.white,
+
+        borderRadius: BorderRadius.circular(10),
+
+        border: Border.all(
+          color: selected
+              ? MarksScreen.primaryBlue
+              : Colors.grey.shade300,
         ),
-      ],
+      ),
+
+      padding: const EdgeInsets.symmetric(
+        horizontal: 18,
+        vertical: 12,
+      ),
+
+      child: Text(
+        title,
+        style: TextStyle(
+          color: selected
+              ? Colors.white
+              : Colors.black87,
+
+          fontSize: 14,
+
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     ),
   );
 }
-List<Map<String, dynamic>> _groupMarksByStudent() {
+  // ===========================================================
+  // SUBJECT MARK FIELD
+  // ===========================================================
 
-  final Map<String, Map<String, dynamic>> grouped = {};
+  Widget _buildSubjectMarkField(String subject) {
+    return Container(
+      padding: const EdgeInsets.all(15),
 
-  for (final mark in viewMarks) {
+      decoration: BoxDecoration(
+        color: Colors.white,
 
-    final String studentId =
-        mark["student_id"].toString();
+        borderRadius: BorderRadius.circular(12),
 
-    if (!grouped.containsKey(studentId)) {
-
-      grouped[studentId] = {
-        "student_id": studentId,
-        "student_name":
-            mark["student_name"]?.toString() ??
-                "Unknown Student",
-        "roll_no":
-            mark["roll_no"]?.toString() ?? "-",
-        "marks": [],
-      };
-    }
-
-    if (mark["mark_id"] != null) {
-
-      grouped[studentId]!["marks"].add(mark);
-    }
-  }
-
-  return grouped.values.toList();
-}
-    @override
-  Widget build(BuildContext context) {
-
-    final availableClasses = getAvailableClasses();
-    final availableSections = getAvailableSections();
-
-    return Scaffold(
-
-      appBar: AppBar(
-        title: const Text("Marks Entry"),
-        centerTitle: true,
+        border: Border.all(
+          color: Colors.grey.shade200,
+        ),
       ),
 
-      body: SafeArea(
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              subject,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ),
 
-        child: SingleChildScrollView(
+          SizedBox(
+            width: 100,
 
-          padding: const EdgeInsets.all(16),
+            child: TextField(
+              controller: markControllers[subject],
+              keyboardType: TextInputType.number,
 
-          child: Column(
+              decoration: InputDecoration(
+                hintText: "Marks",
 
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+                filled: true,
+                fillColor: const Color(0xffF5F7FB),
 
-            children: [
-             if (selectedPage == "Add Marks")...[
-             
-              const Text(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
 
-                "Enter Student Marks",
-
-                style: TextStyle(
-
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-              const SizedBox(height: 20),
+  // ===========================================================
+  // VIEW MARKS PAGE
+  // ===========================================================
 
-              //====================================
-              // CLASS
-              //====================================
+  // ===========================================================
+// VIEW MARKS PAGE
+// ===========================================================
 
-        
+Widget _buildViewMarksPage(BuildContext context) {
+  return Scaffold(
+    backgroundColor: const Color(0xffF5F7FB),
 
-Row(
-  children: [
+    appBar: AppBar(
+      backgroundColor: MarksScreen.primaryBlue,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      centerTitle: true,
 
-    Expanded(
-      child: ElevatedButton(
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
         onPressed: () {
-          setState(() {
-            selectedPage = "Add Marks";
-          });
+          Navigator.pop(context);
         },
-        child: const Text("Add Marks"),
+      ),
+
+      title: const Text(
+        "View Marks",
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     ),
 
-    const SizedBox(width: 10),
+    body: SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
 
-    Expanded(
-      child: ElevatedButton(
-        onPressed: () {
-          setState(() {
-            selectedPage = "View Marks";
-          });
-        },
-        child: const Text("View Marks"),
-      ),
-    ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
 
-  ],
+            const Text(
+              "View Student Marks",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            const Text(
+              "Select class and section to view entered marks.",
+              style: TextStyle(
+                fontSize: 15,
+                color: Colors.grey,
+              ),
+            ),
+
+            const SizedBox(height: 25),
+
+            // =================================================
+            // CLASS + SECTION
+            // =================================================
+
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+
+                Expanded(
+  child: _buildDropdownField(
+    label: "Class",
+    hint: isLoadingAssignedClasses
+        ? "Loading Classes..."
+        : "Select Class",
+    value: selectedClass,
+    items: assignedClasses
+        .map((item) => item["class"]!)
+        .toSet()
+        .toList(),
+    onChanged: (value) {
+      setState(() {
+        selectedClass = value;
+        selectedSection = null;
+        viewMarks = [];
+        marksLoaded = false;
+      });
+    },
+  ),
 ),
 
-const SizedBox(height: 20),
-Text(
-  "Current Page: $selectedPage",
+                const SizedBox(width: 15),
+
+              Expanded(
+  child: _buildDropdownField(
+    label: "Section",
+    hint: selectedClass == null
+        ? "Select Class First"
+        : "Select Section",
+    value: selectedSection,
+    items: assignedClasses
+        .where(
+          (item) => item["class"] == selectedClass,
+        )
+        .map((item) => item["section"]!)
+        .toSet()
+        .toList(),
+    onChanged: selectedClass == null
+        ? (_) {}
+        : (value) {
+            setState(() {
+              selectedSection = value;
+              viewMarks = [];
+              marksLoaded = false;
+            });
+          },
+  ),
+),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // =================================================
+            // LOAD MARKS BUTTON
+            // =================================================
+
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+
+              child: ElevatedButton.icon(
+                onPressed: isLoadingMarks ? null : _loadMarks,
+
+                icon: isLoadingMarks
+    ? const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: Colors.white,
+        ),
+      )
+    : const Icon(
+        Icons.visibility_outlined,
+      ),
+
+label: Text(
+  isLoadingMarks
+      ? "Loading Marks..."
+      : "Load Marks",
   style: const TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.bold,
   ),
 ),
 
-const SizedBox(height: 20),
-              const SizedBox(height: 16),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: MarksScreen.primaryBlue,
+                  foregroundColor: Colors.white,
 
-              //====================================
-              // SECTION
-              //====================================
-
-              DropdownButtonFormField<String>(
-
-                initialValue: selectedSection,
-
-                decoration: const InputDecoration(
-
-                  labelText: "Section",
-
-                  border: OutlineInputBorder(),
-
-                ),
-
-                items: availableSections.map((item) {
-
-                  return DropdownMenuItem(
-
-                    value: item,
-
-                    child: Text(item),
-
-                  );
-
-                }).toList(),
-
-                onChanged: (value) {
-
-                  setState(() {
-
-                    selectedSection = value;
-
-                    selectedStudentId = null;
-
-                    students = [];
-
-                  });
-
-                },
-
-              ),
-
-              const SizedBox(height: 20),
-
-              //====================================
-              // LOAD STUDENTS
-              //====================================
-
-              SizedBox(
-
-                width: double.infinity,
-
-                child: ElevatedButton.icon(
-
-                  icon: const Icon(Icons.people),
-
-                  label: Text(
-
-                    isLoading
-                        ? "Loading..."
-                        : "Load Students",
-
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-
-                  onPressed:
-                      isLoading
-                          ? null
-                          : loadStudents,
-
                 ),
-
               ),
+            ),
+            // =================================================
+// ASSESSMENT
+// =================================================
 
-              const SizedBox(height: 20),
+const Text(
+  "Assessment",
+  style: TextStyle(
+    fontSize: 17,
+    fontWeight: FontWeight.bold,
+    color: Colors.black87,
+  ),
+),
 
-              //====================================
-              // STUDENT
-              //====================================
+const SizedBox(height: 12),
 
-              DropdownButtonFormField<String>(
+Wrap(
+  spacing: 10,
+  runSpacing: 10,
+  children: [
+    _buildViewAssessmentButton("Monthly"),
+    _buildViewAssessmentButton("Quarterly"),
+    _buildViewAssessmentButton("Half Yearly"),
+    _buildViewAssessmentButton("Annual"),
+  ],
+),
 
-                initialValue: selectedStudentId,
+const SizedBox(height: 25),
 
-                decoration: const InputDecoration(
+            const SizedBox(height: 25),
 
-                  labelText: "Student",
+            // =================================================
+            // MARKS RESULT
+            // =================================================
 
-                  border: OutlineInputBorder(),
+            if (viewMarks.isNotEmpty)
+                _buildMarksResult(),
 
+            if (marksLoaded && viewMarks.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(25),
+
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: Colors.grey.shade200,
+                  ),
                 ),
 
-                items: students.map<DropdownMenuItem<String>>((student) {
+                child: const Column(
+                  children: [
 
-                  return DropdownMenuItem<String>(
-
-                    value: student["student_id"].toString(),
-
-                    child: Text(
-                      student["full_name"].toString(),
+                    Icon(
+                      Icons.assignment_outlined,
+                      size: 45,
+                      color: Colors.grey,
                     ),
 
-                  );
-
-                }).toList(),
-
-                onChanged: (value) {
-
-                  setState(() {
-
-                    selectedStudentId = value;
-
-                  });
-
-                },
-
-              ),
-
-              const SizedBox(height: 20),
-                            //====================================
-              // SUBJECT
-              //====================================
-
-              DropdownButtonFormField<String>(
-
-                initialValue: selectedSubject,
-
-                decoration: const InputDecoration(
-
-                  labelText: "Subject",
-
-                  border: OutlineInputBorder(),
-
-                ),
-
-                items: getAvailableSubjects().map((subject) {
-
-                  return DropdownMenuItem<String>(
-
-                    value: subject,
-
-                    child: Text(subject),
-
-                  );
-
-                }).toList(),
-
-                onChanged: (value) {
-
-                  setState(() {
-
-                    selectedSubject = value;
-
-                  });
-
-                },
-
-              ),
-
-              const SizedBox(height: 16),
-
-              //====================================
-              // ASSESSMENT TYPE
-              //====================================
-
-              DropdownButtonFormField<String>(
-
-                initialValue: selectedAssessmentType,
-
-                decoration: const InputDecoration(
-
-                  labelText: "Assessment Type",
-
-                  border: OutlineInputBorder(),
-
-                ),
-
-                items: assessmentTypes.map((type) {
-
-                  return DropdownMenuItem<String>(
-
-                    value: type,
-
-                    child: Text(type),
-
-                  );
-
-                }).toList(),
-
-                onChanged: (value) {
-
-                  setState(() {
-
-                    selectedAssessmentType = value;
-
-                    if (value != null) {
-                      setDefaultMaximumMarks(value);
-                    }
-
-                  });
-
-                },
-
-              ),
-
-              const SizedBox(height: 16),
-
-              //====================================
-              // ASSESSMENT NAME
-              //====================================
-
-              TextField(
-
-                controller: assessmentNameController,
-
-                decoration: const InputDecoration(
-
-                  labelText: "Assessment Name",
-
-                  hintText: "Example: Monthly Test - July",
-
-                  border: OutlineInputBorder(),
-
-                ),
-
-              ),
-
-              const SizedBox(height: 16),
-
-              //====================================
-              // ASSESSMENT DATE
-              //====================================
-
-              InkWell(
-
-                onTap: () async {
-
-                  final pickedDate =
-                      await showDatePicker(
-
-                    context: context,
-
-                    initialDate: DateTime.now(),
-
-                    firstDate: DateTime(2024),
-
-                    lastDate: DateTime(2100),
-
-                  );
-
-                  if (pickedDate != null) {
-
-                    setState(() {
-
-                      selectedAssessmentDate =
-                          pickedDate;
-
-                    });
-
-                  }
-
-                },
-
-                child: InputDecorator(
-
-                  decoration: const InputDecoration(
-
-                    labelText: "Assessment Date",
-
-                    border: OutlineInputBorder(),
-
-                    suffixIcon:
-                        Icon(Icons.calendar_today),
-
-                  ),
-
-                  child: Text(
-
-                    selectedAssessmentDate == null
-
-                        ? "Select Date"
-
-                        : "${selectedAssessmentDate!.day.toString().padLeft(2, '0')}-"
-                          "${selectedAssessmentDate!.month.toString().padLeft(2, '0')}-"
-                          "${selectedAssessmentDate!.year}",
-
-                  ),
-
-                ),
-
-              ),
-
-              const SizedBox(height: 16),
-
-              //====================================
-              // ACADEMIC YEAR
-              //====================================
-
-              DropdownButtonFormField<String>(
-
-                initialValue: selectedAcademicYear,
-
-                decoration: const InputDecoration(
-
-                  labelText: "Academic Year",
-
-                  border: OutlineInputBorder(),
-
-                ),
-
-                items: academicYears.map((year) {
-
-                  return DropdownMenuItem<String>(
-
-                    value: year,
-
-                    child: Text(year),
-
-                  );
-
-                }).toList(),
-
-                onChanged: (value) {
-
-                  setState(() {
-
-                    selectedAcademicYear = value;
-
-                  });
-
-                },
-
-              ),
-
-              const SizedBox(height: 20),
-                            //====================================
-              // MAXIMUM MARKS
-              //====================================
-
-              TextField(
-                controller: totalMarksController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: "Maximum Marks",
-                  border: OutlineInputBorder(),
+                    SizedBox(height: 12),
+
+                    Text(
+                      "No marks found",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    SizedBox(height: 5),
+
+                    Text(
+                      "No marks have been entered for this class and section.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
-              const SizedBox(height: 16),
+            const SizedBox(height: 30),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+// ===========================================================
+// MARKS RESULT
+// ===========================================================
 
-              //====================================
-              // OBTAINED MARKS
-              //====================================
+Widget _buildMarksResult() {
+  double totalObtained = 0;
+  double totalMaximum = 0;
 
-              TextField(
-                controller: obtainedMarksController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: "Obtained Marks",
-                  border: OutlineInputBorder(),
-                ),
-              ),
+  final Map<String, dynamic> marksBySubject = {};
 
-              const SizedBox(height: 16),
+  for (final mark in viewMarks) {
+    if (mark is Map<String, dynamic>) {
+      final subject =
+          mark["subject"]?.toString() ?? "";
 
-              //====================================
-              // TEACHER REMARKS
-              //====================================
+      marksBySubject[subject] = mark;
 
-              TextField(
-                controller: remarksController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: "Teacher Remarks",
-                  hintText: "Optional",
-                  border: OutlineInputBorder(),
-                ),
-              ),
+      final obtained =
+          double.tryParse(
+                mark["marks_obtained"]?.toString() ?? "",
+              ) ??
+              0;
 
-              const SizedBox(height: 30),
+      final maximum =
+          double.tryParse(
+                mark["total_marks"]?.toString() ?? "",
+              ) ??
+              0;
 
-              //====================================
-              // SAVE BUTTON
-              //====================================
+      totalObtained += obtained;
+      totalMaximum += maximum;
+    }
+  }
 
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: isLoading ? null : saveMarks,
-                  icon: const Icon(Icons.save),
-                  label: Text(
-                    isLoading ? "Saving..." : "Save Marks",
-                  ),
-                ),
-              ),
+  final double percentage =
+      totalMaximum > 0
+          ? (totalObtained / totalMaximum) * 100
+          : 0;
 
-              const SizedBox(height: 20),
-          
-             ],
-             if (selectedPage == "View Marks") ...[
-  Column(
+  String performance;
+
+  if (percentage >= 90) {
+    performance = "Excellent";
+  } else if (percentage >= 75) {
+    performance = "Very Good";
+  } else if (percentage >= 60) {
+    performance = "Good";
+  } else if (percentage >= 40) {
+    performance = "Average";
+  } else {
+    performance = "Needs Improvement";
+  }
+
+  final String studentName =
+      viewMarks.isNotEmpty &&
+              viewMarks.first is Map<String, dynamic>
+          ? viewMarks.first["student_name"]
+                  ?.toString() ??
+              "Student"
+          : "Student";
+
+  return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
+
     children: [
+      // =====================================================
+      // STUDENT INFORMATION
+      // =====================================================
 
-      const Text(
-        "View Student Marks",
-        style: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-
-      const SizedBox(height: 20),
-
-      // ==========================================
-      // CLASS
-      // ==========================================
-
-      DropdownButtonFormField<String>(
-        initialValue: selectedClass,
-        decoration: const InputDecoration(
-          labelText: "Class",
-          border: OutlineInputBorder(),
-        ),
-        items: availableClasses.map((item) {
-          return DropdownMenuItem<String>(
-            value: item.toString(),
-            child: Text("Class $item"),
-          );
-        }).toList(),
-        onChanged: (value) {
-          setState(() {
-            selectedClass = value;
-            selectedSection = null;
-            viewMarks = [];
-          });
-        },
-      ),
-
-      const SizedBox(height: 16),
-
-      // ==========================================
-      // SECTION
-      // ==========================================
-
-      DropdownButtonFormField<String>(
-        initialValue: selectedSection,
-        decoration: const InputDecoration(
-          labelText: "Section",
-          border: OutlineInputBorder(),
-        ),
-        items: availableSections.map((item) {
-          return DropdownMenuItem<String>(
-            value: item.toString(),
-            child: Text(item.toString()),
-          );
-        }).toList(),
-        onChanged: (value) {
-          setState(() {
-            selectedSection = value;
-            viewMarks = [];
-          });
-        },
-      ),
-
-      const SizedBox(height: 20),
-
-      // ==========================================
-      // LOAD MARKS BUTTON
-      // ==========================================
-
-      SizedBox(
+      Container(
         width: double.infinity,
-        height: 50,
-        child: ElevatedButton.icon(
-          onPressed: isLoading ? null : loadViewMarks,
-          icon: const Icon(Icons.visibility),
-          label: Text(
-            isLoading ? "Loading..." : "View Marks",
+
+        padding: const EdgeInsets.all(18),
+
+        decoration: BoxDecoration(
+          color: Colors.white,
+
+          borderRadius:
+              BorderRadius.circular(16),
+
+          border: Border.all(
+            color: Colors.grey.shade200,
           ),
         ),
-      ),
 
-      const SizedBox(height: 25),
+        child: Column(
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
 
-      // ==========================================
-      // NO MARKS
-      // ==========================================
+          children: [
+            Text(
+              studentName,
 
-      if (!isLoading && viewMarks.isEmpty)
-        const Center(
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Text(
-              "No marks found for the selected class and section.",
-              style: TextStyle(
-                fontSize: 16,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            Text(
+              "Class $selectedClass - Section $selectedSection",
+
+              style: const TextStyle(
+                fontSize: 14,
                 color: Colors.grey,
               ),
-              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: 4),
+
+            Text(
+              selectedAssessment,
+
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: MarksScreen.primaryBlue,
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      const SizedBox(height: 18),
+
+      // =====================================================
+      // SUBJECT MARKS TITLE
+      // =====================================================
+
+      const Text(
+        "Subject-wise Marks",
+
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.black87,
+        ),
+      ),
+
+      const SizedBox(height: 12),
+
+      // =====================================================
+      // SUBJECT CARDS
+      // =====================================================
+
+      ...subjects.map(
+        (subject) {
+          final mark =
+              marksBySubject[subject];
+
+          return _buildViewSubjectCard(
+            subject: subject,
+            mark: mark,
+          );
+        },
+      ),
+
+      const SizedBox(height: 18),
+
+      // =====================================================
+      // SUMMARY
+      // =====================================================
+
+      Container(
+        width: double.infinity,
+
+        padding: const EdgeInsets.all(20),
+
+        decoration: BoxDecoration(
+          color: Colors.white,
+
+          borderRadius:
+              BorderRadius.circular(16),
+
+          border: Border.all(
+            color: Colors.grey.shade200,
+          ),
+        ),
+
+        child: Column(
+          children: [
+            _buildSummaryRow(
+              "Total Marks",
+              "${_formatNumber(totalObtained)} / ${_formatNumber(totalMaximum)}",
+            ),
+
+            const Divider(height: 25),
+
+            _buildSummaryRow(
+              "Percentage",
+              "${percentage.toStringAsFixed(2)}%",
+            ),
+
+            const Divider(height: 25),
+
+            _buildSummaryRow(
+              "Performance",
+              performance,
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+// ===========================================================
+// VIEW SUBJECT CARD
+// ===========================================================
+
+Widget _buildViewSubjectCard({
+  required String subject,
+  required dynamic mark,
+}) {
+  if (mark == null) {
+    return Container(
+      width: double.infinity,
+
+      margin: const EdgeInsets.only(bottom: 10),
+
+      padding: const EdgeInsets.all(16),
+
+      decoration: BoxDecoration(
+        color: Colors.white,
+
+        borderRadius:
+            BorderRadius.circular(12),
+
+        border: Border.all(
+          color: Colors.grey.shade200,
+        ),
+      ),
+
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              subject,
+
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+
+          const Text(
+            "Not entered",
+
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  final double obtained =
+      double.tryParse(
+            mark["marks_obtained"]?.toString() ??
+                "",
+          ) ??
+          0;
+
+  final double total =
+      double.tryParse(
+            mark["total_marks"]?.toString() ??
+                "",
+          ) ??
+          0;
+
+  final double percentage =
+      total > 0
+          ? (obtained / total) * 100
+          : 0;
+
+  return Container(
+    width: double.infinity,
+
+    margin: const EdgeInsets.only(bottom: 10),
+
+    padding: const EdgeInsets.all(16),
+
+    decoration: BoxDecoration(
+      color: Colors.white,
+
+      borderRadius:
+          BorderRadius.circular(12),
+
+      border: Border.all(
+        color: Colors.grey.shade200,
+      ),
+    ),
+
+    child: Row(
+      children: [
+        // ===================================================
+        // SUBJECT
+        // ===================================================
+
+        Expanded(
+          child: Text(
+            subject,
+
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
             ),
           ),
         ),
 
-      // ==========================================
-      // MARKS LIST
-      // ==========================================
+        // ===================================================
+        // MARKS
+        // ===================================================
 
-      if (viewMarks.isNotEmpty)
-  ListView.builder(
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    itemCount: _groupMarksByStudent().length,
-    itemBuilder: (context, index) {
-      final student = _groupMarksByStudent()[index];
+        Column(
+          crossAxisAlignment:
+              CrossAxisAlignment.end,
 
-      final String studentName =
-          student["student_name"] ?? "Unknown Student";
+          children: [
+            Text(
+              "${_formatNumber(obtained)} / ${_formatNumber(total)}",
 
-      final String rollNo =
-          student["roll_no"] ?? "-";
-
-      final List marks =
-          student["marks"] ?? [];
-
-      return Card(
-        margin: const EdgeInsets.only(bottom: 16),
-        elevation: 3,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
-            children: [
-
-              // ======================================
-              // STUDENT HEADER
-              // ======================================
-
-              Row(
-                children: [
-
-                  const Icon(
-                    Icons.person,
-                    size: 30,
-                  ),
-
-                  const SizedBox(width: 10),
-
-                  Expanded(
-                    child: Text(
-                      studentName,
-                      style: const TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-
-                  Text(
-                    "Roll No: $rollNo",
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: MarksScreen.primaryBlue,
               ),
+            ),
 
-              const Divider(height: 25),
+            const SizedBox(height: 3),
 
-              // ======================================
-              // NO MARKS
-              // ======================================
+            Text(
+              "${percentage.toStringAsFixed(1)}%",
 
-              if (marks.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(10),
-                  child: Row(
-                    children: [
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+// ===========================================================
+// SUMMARY ROW
+// ===========================================================
 
-                      Icon(
-                        Icons.pending_actions,
-                        color: Colors.orange,
-                      ),
+Widget _buildSummaryRow(
+  String title,
+  String value,
+) {
+  return Row(
+    mainAxisAlignment:
+        MainAxisAlignment.spaceBetween,
 
-                      SizedBox(width: 10),
+    children: [
+      Text(
+        title,
 
-                      Text(
-                        "Marks Not Entered",
-                        style: TextStyle(
-                          color: Colors.orange,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: Colors.black87,
+        ),
+      ),
+
+      Text(
+        value,
+
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: MarksScreen.primaryBlue,
+        ),
+      ),
+    ],
+  );
+}
+// ===========================================================
+// FORMAT NUMBER
+// ===========================================================
+
+String _formatNumber(double value) {
+  if (value == value.roundToDouble()) {
+    return value.toInt().toString();
+  }
+
+  return value.toStringAsFixed(2);
+}
+  // ===========================================================
+  // MANAGEMENT CARD
+  // ===========================================================
+
+  Widget _buildManagementCard({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 2,
+
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+
+          decoration: BoxDecoration(
+            color: Colors.white,
+
+            borderRadius: BorderRadius.circular(16),
+
+            border: Border.all(
+              color: Colors.grey.shade200,
+            ),
+          ),
+
+          child: Row(
+            children: [
+              Container(
+                width: 55,
+                height: 55,
+
+                decoration: BoxDecoration(
+                  color: MarksScreen.primaryBlue
+                      .withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(14),
                 ),
 
-              // ======================================
-              // MARKS
-              // ======================================
+                child: Icon(
+                  icon,
+                  color: MarksScreen.primaryBlue,
+                  size: 30,
+                ),
+              ),
 
-              if (marks.isNotEmpty)
-                ...marks.map<Widget>((mark) {
+              const SizedBox(width: 16),
 
-                  final subject =
-                      mark["subject"]?.toString() ?? "-";
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
 
-                  final assessmentName =
-                      mark["assessment_name"]?.toString() ?? "-";
-
-                  final assessmentType =
-                      mark["assessment_type"]?.toString() ?? "-";
-
-                  final marksObtained =
-                      mark["marks_obtained"]?.toString() ?? "0";
-
-                  final totalMarks =
-                      mark["total_marks"]?.toString() ?? "0";
-
-                  final assessmentDate =
-                      mark["assessment_date"]?.toString() ?? "-";
-
-                  return Container(
-                    margin:
-                        const EdgeInsets.only(bottom: 12),
-                    padding:
-                        const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      borderRadius:
-                          BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Colors.grey.shade300,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
                     ),
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                      children: [
 
-                        Text(
-                          subject,
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                    const SizedBox(height: 5),
 
-                        const SizedBox(height: 8),
-
-                        _markRow(
-                          "Assessment",
-                          assessmentName,
-                        ),
-
-                        _markRow(
-                          "Type",
-                          assessmentType,
-                        ),
-
-                        _markRow(
-                          "Date",
-                          assessmentDate,
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
-                          children: [
-
-                            const Text(
-                              "Marks",
-                              style: TextStyle(
-                                fontWeight:
-                                    FontWeight.bold,
-                              ),
-                            ),
-
-                            Text(
-                              "$marksObtained / $totalMarks",
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight:
-                                    FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
                     ),
-                  );
-                }),
+                  ],
+                ),
+              ),
+
+              const Icon(
+                Icons.arrow_forward_ios,
+                size: 18,
+                color: Colors.grey,
+              ),
             ],
           ),
         ),
-      );
-    },
-  ),
-    ],
-  ),
-],
-             
-              ]
-  
-          ),
-        ),
+      ),
+    );
+  }
+
+  // ===========================================================
+  // MESSAGE
+  // ===========================================================
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
       ),
     );
   }

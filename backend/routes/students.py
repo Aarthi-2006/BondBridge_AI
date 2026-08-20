@@ -25,37 +25,73 @@ def get_students():
 
         student_class = request.args.get("class")
         section = request.args.get("section")
-       
+        teacher_id = request.args.get("teacher_id")
+
+        # =========================================================
+        # TEACHER CLASS/SECTION PERMISSION
+        # =========================================================
+
+        if teacher_id and student_class and section:
+
+            cursor.execute("""
+                SELECT assignment_id
+                FROM class_teacher_assignment
+                WHERE teacher_id = %s
+                  AND class = %s
+                  AND section = %s
+                LIMIT 1
+            """, (
+                teacher_id,
+                student_class,
+                section
+            ))
+
+            assignment = cursor.fetchone()
+
+            if not assignment:
+                return jsonify({
+                    "message": "You are not assigned to this class and section."
+                }), 403
+
+        # =========================================================
+        # GET STUDENTS
+        # =========================================================
+
         query = """
-        SELECT
-            s.student_id,
-            u.full_name,
-            u.email,
-            s.roll_no,
-            s.class,
-            s.section,
-            s.gender,
-            s.date_of_birth,
-            s.admission_date
-        FROM students s
-        JOIN users u
-        ON s.user_id = u.user_id
+            SELECT
+                s.student_id,
+                u.full_name,
+                u.email,
+                s.roll_no,
+                s.class,
+                s.section,
+                s.gender,
+                s.date_of_birth,
+                s.admission_date
+            FROM students s
+            JOIN users u
+                ON s.user_id = u.user_id
         """
 
         values = ()
 
         if student_class and section:
+
             query += """
-            WHERE s.class=%s
-            AND s.section=%s
+                WHERE s.class = %s
+                AND s.section = %s
             """
-            values = (student_class, section)
+
+            values = (
+                student_class,
+                section
+            )
 
         query += """
-        ORDER BY
-        s.class,
-        s.section,
-        CAST(s.roll_no AS UNSIGNED)
+            ORDER BY
+                s.class,
+                s.section,
+                CAST(s.roll_no AS UNSIGNED)
         """
 
         cursor.execute(query, values)

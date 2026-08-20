@@ -450,19 +450,15 @@ setDialogState(() {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
-
       appBar: AppBar(
-        elevation: 0,
-        centerTitle: true,
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
         title: const Text(
           "Parent Management",
           style: TextStyle(
             fontWeight: FontWeight.bold,
           ),
         ),
+                backgroundColor: Colors.blue,
+
       ),
 
       floatingActionButton: FloatingActionButton.extended(

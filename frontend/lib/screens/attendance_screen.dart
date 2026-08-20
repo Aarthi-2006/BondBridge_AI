@@ -230,11 +230,10 @@ Future loadAttendance() async {
       appBar: AppBar(
 
         title: const Text(
-          "Attendance",
+          "Attendance Management",
         ),
 
-        backgroundColor:
-        const Color(0xff1F4FB8),
+        backgroundColor:Colors.blue,
 
       ),
 

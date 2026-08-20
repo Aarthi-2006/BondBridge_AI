@@ -138,16 +138,23 @@ class ApiService {
 static Future<List<dynamic>> getStudents({
   String? studentClass,
   String? section,
+  int? teacherId,
 }) async {
   try {
     String url = "$baseUrl/students";
 
-    // Add query parameters if class and section are provided
+    // Add query parameters
     if (studentClass != null &&
         studentClass.isNotEmpty &&
         section != null &&
         section.isNotEmpty) {
-      url += "?class=$studentClass&section=$section";
+      url +=
+          "?class=${Uri.encodeComponent(studentClass)}"
+          "&section=${Uri.encodeComponent(section)}";
+
+      if (teacherId != null) {
+        url += "&teacher_id=$teacherId";
+      }
     }
 
     final response = await http.get(
@@ -1150,19 +1157,44 @@ static Future<Map<String, dynamic>> viewAttendance({
 // ======================================
 // GET MARKS
 // ======================================
+// ======================================
+// GET MARKS
+// ======================================
 
 static Future<List> getMarks({
   required String studentClass,
   required String section,
+  int? studentId,
+  String? assessmentType,
+  int? teacherId,
 }) async {
 
   try {
 
-    final response = await http.get(
-      Uri.parse(
-        "$baseUrl/marks?class=$studentClass&section=$section",
-      ),
-    );
+    final params = <String, String>{
+      "class": studentClass,
+      "section": section,
+    };
+
+    if (studentId != null) {
+      params["student_id"] = studentId.toString();
+    }
+
+    if (assessmentType != null &&
+        assessmentType.isNotEmpty) {
+      params["assessment_type"] = assessmentType;
+    }
+
+    if (teacherId != null) {
+      params["teacher_id"] = teacherId.toString();
+    }
+
+    final uri = Uri.parse("$baseUrl/marks")
+        .replace(
+          queryParameters: params,
+        );
+
+    final response = await http.get(uri);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -1173,7 +1205,6 @@ static Future<List> getMarks({
   } catch (e) {
     return [];
   }
-
 }
 
 

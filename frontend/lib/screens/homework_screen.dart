@@ -58,7 +58,9 @@ final List<String> subjects = [
   "Mathematics",
   "Science",
   "Social Science",
-  "Computer Science",
+  "Biology",
+  "Chemistry",
+  "Physics",
 ];
 // ==========================================
 // SELECTED DATES
@@ -181,6 +183,7 @@ Future loadHomework() async {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Homework"),
+        backgroundColor: Colors.blue,
       ),
      body: SingleChildScrollView(
   padding: const EdgeInsets.all(16),
