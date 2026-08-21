@@ -1154,23 +1154,17 @@ static Future<Map<String, dynamic>> viewAttendance({
 // GET MARKS
 // ======================================
 
-// ======================================
-// GET MARKS
-// ======================================
-// ======================================
-// GET MARKS
-// ======================================
-
 static Future<List> getMarks({
   required String studentClass,
   required String section,
   int? studentId,
   String? assessmentType,
+    String? assessmentCategory,
+
+  String? month,
   int? teacherId,
 }) async {
-
   try {
-
     final params = <String, String>{
       "class": studentClass,
       "section": section,
@@ -1184,29 +1178,48 @@ static Future<List> getMarks({
         assessmentType.isNotEmpty) {
       params["assessment_type"] = assessmentType;
     }
+    if (assessmentCategory != null &&
+    assessmentCategory.isNotEmpty) {
+  params["assessment_category"] = assessmentCategory;
+}
+
+    if (month != null && month.isNotEmpty) {
+      params["month"] = month;
+    }
 
     if (teacherId != null) {
       params["teacher_id"] = teacherId.toString();
     }
 
-    final uri = Uri.parse("$baseUrl/marks")
-        .replace(
-          queryParameters: params,
-        );
+    final uri = Uri.parse("$baseUrl/marks").replace(
+      queryParameters: params,
+    );
 
     final response = await http.get(uri);
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final data = jsonDecode(response.body);
+
+      if (data is List) {
+        return data;
+      }
+
+      if (data is Map<String, dynamic>) {
+        if (data["marks"] is List) {
+          return data["marks"];
+        }
+
+        if (data["data"] is List) {
+          return data["data"];
+        }
+      }
     }
 
     return [];
-
   } catch (e) {
     return [];
   }
 }
-
 
 // ======================================
 // ADD MARKS
@@ -1222,9 +1235,14 @@ static Future<Map<String, dynamic>> addMarks({
   required String assessmentName,
   String? assessmentDate,
   String? academicYear,
-  required double marksObtained,
-  required double totalMarks,
-  String? teacherRemarks,
+  String? month,
+  double? marksObtained,
+double? totalMarks,
+String? teacherRemarks,
+String? activityCategory,
+String? activity,
+String? achievement,
+String? level,
 }) async {
   final response = await http.post(
     Uri.parse("$baseUrl/marks"),
@@ -1240,9 +1258,14 @@ static Future<Map<String, dynamic>> addMarks({
       "assessment_name": assessmentName,
       "assessment_date": assessmentDate,
       "academic_year": academicYear,
+      "month": month,
       "marks_obtained": marksObtained,
-      "total_marks": totalMarks,
-      "teacher_remarks": teacherRemarks,
+"total_marks": totalMarks,
+"teacher_remarks": teacherRemarks,
+"activity_category": activityCategory,
+"activity": activity,
+"achievement": achievement,
+"level": level,
     }),
   );
 

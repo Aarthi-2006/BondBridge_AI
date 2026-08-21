@@ -43,7 +43,9 @@ def get_marks():
     teacher_id = request.args.get("teacher_id")
     student_class = request.args.get("class")
     section = request.args.get("section")
+    month = request.args.get("month")
     assessment_type = request.args.get("assessment_type")
+    assessment_category = request.args.get("assessment_category")
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -68,7 +70,11 @@ def get_marks():
             m.academic_year,
             m.marks_obtained,
             m.total_marks,
-            m.teacher_remarks
+            m.teacher_remarks,
+            m.activity_category,
+            m.activity,
+            m.achievement,
+            m.level
 
         FROM students s
 
@@ -124,9 +130,48 @@ def get_marks():
 # ASSESSMENT TYPE FILTER
 # ==========================================
 
+    # ==========================================
+# ASSESSMENT TYPE + MONTH FILTER
+# ==========================================
+
+    # ==========================================
+# ASSESSMENT CATEGORY FILTER
+# ==========================================
+
+    if assessment_category:
+        conditions.append(
+            "m.assessment_category = %s"
+        )
+        values.append(assessment_category)
+
+
+# ==========================================
+# ASSESSMENT TYPE + MONTH FILTER
+# ==========================================
+
     if assessment_type:
-        conditions.append("m.assessment_type = %s")
+        conditions.append(
+            "m.assessment_type = %s"
+        )
         values.append(assessment_type)
+        if assessment_type == "Monthly Test":
+
+            if not month:
+                cursor.close()
+                conn.close()
+
+                return jsonify({
+                    "error": "Month is required for Monthly Test"
+                }), 400
+
+            conditions.append(
+                "m.assessment_name = %s"
+            )
+
+            values.append(
+                f"{month} Monthly Test"
+            )
+              
     # ==========================================
     # WHERE
     # ==========================================
@@ -172,13 +217,25 @@ def add_marks():
     assessment_name = data.get("assessment_name")
     assessment_date = data.get("assessment_date")
     academic_year = data.get("academic_year")
-
+    month = data.get("month")
     marks_obtained = data.get("marks_obtained")
     total_marks = data.get("total_marks")
-
     teacher_remarks = data.get("teacher_remarks")
+    activity_category = data.get("activity_category")
+    activity = data.get("activity")
+    achievement = data.get("achievement")
+    level = data.get("level")
 
     # Keep exam_name for compatibility with existing table/data
+    # Monthly Test assessment name must include the selected month
+    if assessment_category == "Academic" and assessment_type == "Monthly Test":
+        if not month:
+            return jsonify({
+                "error": "Month is required for Monthly Test"
+            }), 400
+
+        assessment_name = f"{month} Monthly Test"
+# Keep exam_name for compatibility
     exam_name = assessment_name
 
     if not student_id:
@@ -195,33 +252,57 @@ def add_marks():
 
     if not assessment_category:
         return jsonify({"error": "Assessment category is required"}), 400
+    if assessment_category == "Extracurricular":
+        if not activity_category:
+            return jsonify({"error": "Activity category is required"}), 400
+
+        if activity_category == "Sports" and not activity:
+            return jsonify({"error": "Sports activity is required"}), 400
+
+        if not achievement:
+            return jsonify({"error": "Achievement is required"}), 400
+
+        if not level:
+            return jsonify({"error": "Level is required"}), 400
 
     if not assessment_name:
         return jsonify({"error": "Assessment name is required"}), 400
-
-    if marks_obtained is None:
-        return jsonify({"error": "Marks obtained is required"}), 400
-
-    if total_marks is None:
-        return jsonify({"error": "Total marks is required"}), 400
-
-    try:
-        marks_obtained = float(marks_obtained)
-        total_marks = float(total_marks)
-    except (TypeError, ValueError):
-        return jsonify({"error": "Marks must be numbers"}), 400
-
-    if total_marks <= 0:
-        return jsonify({"error": "Total marks must be greater than 0"}), 400
-
-    if marks_obtained < 0:
-        return jsonify({"error": "Marks obtained cannot be negative"}), 400
-
-    if marks_obtained > total_marks:
+    if assessment_category == "Academic" and assessment_type == "Monthly Test" and not month:
         return jsonify({
-            "error": "Marks obtained cannot be greater than total marks"
+            "error": "Month is required for Monthly Test"
         }), 400
+    if assessment_category == "Academic":
 
+        if marks_obtained is None:
+            return jsonify({"error": "Marks obtained is required"}), 400
+
+        if total_marks is None:
+            return jsonify({"error": "Total marks is required"}), 400
+
+        try:
+            marks_obtained = float(marks_obtained)
+            total_marks = float(total_marks)
+        except (TypeError, ValueError):
+            return jsonify({"error": "Marks must be numbers"}), 400
+
+        if total_marks <= 0:
+            return jsonify({
+                "error": "Total marks must be greater than 0"
+            }), 400
+
+        if marks_obtained < 0:
+            return jsonify({
+                "error": "Marks obtained cannot be negative"
+            }), 400
+
+        if marks_obtained > total_marks:
+            return jsonify({
+                "error": "Marks obtained cannot be greater than total marks"
+            }), 400
+
+    else:
+        marks_obtained = None
+        total_marks = None
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -249,13 +330,18 @@ def add_marks():
             assessment_type,
             assessment_category,
             assessment_name,
+            month,
             assessment_date,
             academic_year,
             marks_obtained,
             total_marks,
-            teacher_remarks
+            teacher_remarks,
+            activity_category,
+            activity,
+            achievement,
+            level
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
 
     values = (
@@ -266,11 +352,16 @@ def add_marks():
         assessment_type,
         assessment_category,
         assessment_name,
+        month,
         assessment_date,
         academic_year,
         marks_obtained,
         total_marks,
-        teacher_remarks
+        teacher_remarks,
+        activity_category,
+        activity,
+        achievement,
+        level
     )
 
     cursor.execute(query, values)

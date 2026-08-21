@@ -24,6 +24,16 @@ def teacher_has_class_permission(cursor, teacher_id, target_class, target_sectio
     ))
 
     return cursor.fetchone() is not None
+def teacher_has_any_class_permission(cursor, teacher_id):
+
+    cursor.execute("""
+        SELECT 1
+        FROM class_teacher_assignment
+        WHERE teacher_id=%s
+        LIMIT 1
+    """, (teacher_id,))
+
+    return cursor.fetchone() is not None
 
 
 # =====================================================
@@ -74,15 +84,23 @@ def get_announcements():
                     OR
                     (
                         teacher_id=%s
-                        AND target_class IN (
-                            SELECT class
-                            FROM class_teacher_assignment
-                            WHERE teacher_id=%s
-                        )
-                        AND target_section IN (
-                            SELECT section
-                            FROM class_teacher_assignment
-                            WHERE teacher_id=%s
+                        AND
+                        (
+                            target_class='ALL_ASSIGNED'
+                            OR
+                            (
+                                target_class IN (
+                                    SELECT class
+                                    FROM class_teacher_assignment
+                                    WHERE teacher_id=%s
+                                )
+                                AND
+                                target_section IN (
+                                    SELECT section
+                                    FROM class_teacher_assignment
+                                    WHERE teacher_id=%s
+                                )
+                            )
                         )
                     )
                 ORDER BY created_at DESC
@@ -114,8 +132,22 @@ def get_announcements():
                     a.created_by='Admin'
                     OR
                     (
-                        a.target_class=s.class
-                        AND a.target_section=s.section
+                        (
+                            a.target_class=s.class
+                            AND a.target_section=s.section
+                        )
+                        OR
+                        (
+                            a.target_class='ALL_ASSIGNED'
+                            AND EXISTS (
+                                SELECT 1
+                                FROM class_teacher_assignment cta
+                                WHERE cta.teacher_id=a.teacher_id
+                                AND cta.class=s.class
+                                AND cta.section=s.section
+                            )
+                        )
+                        
                     )
                 ORDER BY a.created_at DESC
             """, (user_id,))
@@ -142,8 +174,21 @@ def get_announcements():
                     a.created_by='Admin'
                     OR
                     (
-                        a.target_class=s.class
-                        AND a.target_section=s.section
+                        (
+                            a.target_class=s.class
+                            AND a.target_section=s.section
+                        )
+                        OR
+                        (
+                            a.target_class='ALL_ASSIGNED'
+                            AND EXISTS (
+                                SELECT 1
+                                FROM class_teacher_assignment cta
+                                WHERE cta.teacher_id=a.teacher_id
+                                AND cta.class=s.class
+                                AND cta.section=s.section
+                            )
+                        )
                     )
                 ORDER BY a.created_at DESC
             """, (user_id,))
@@ -311,34 +356,56 @@ def add_announcement():
                     "message": "teacher_id is required"
                 }), 400
 
-            if not target_class or not target_section:
+            if target_class == "ALL_ASSIGNED":
 
-                cursor.close()
-                conn.close()
+                allowed = teacher_has_any_class_permission(
+                    cursor,
+                    teacher_id
+                )
 
-                return jsonify({
-                    "success": False,
-                    "message": "Class and section are required for teacher announcements"
-                }), 400
+                if not allowed:
 
-            # Backend permission check
-            allowed = teacher_has_class_permission(
-                cursor,
-                teacher_id,
-                target_class,
-                target_section
-            )
+                    cursor.close()
+                    conn.close()
 
-            if not allowed:
+                    return jsonify({
+                        "success": False,
+                        "message": "You are not assigned to any class"
+                    }), 403
 
-                cursor.close()
-                conn.close()
+                target_section = None
 
-                return jsonify({
-                    "success": False,
-                    "message": "You are not assigned to this class and section"
-                }), 403
+            else:
 
+                if not target_class or not target_section:
+
+                    cursor.close()
+                    conn.close()
+
+                    return jsonify({
+                        "success": False,
+                        "message": "Class and section are required for teacher announcements"
+                    }), 400
+
+    # Backend permission check
+                allowed = teacher_has_class_permission(
+                    cursor,
+                    teacher_id,
+                    target_class,
+                    target_section
+                )
+
+                if not allowed:
+
+                    cursor.close()
+                    conn.close()
+
+                    return jsonify({
+                        "success": False,
+                        "message": "You are not assigned to this class and section"
+                    }), 403
+
+            
             cursor.execute("""
                 INSERT INTO announcements
                 (
@@ -484,34 +551,56 @@ def update_announcement(announcement_id):
         target_section = data.get("target_section")
 
         # Teacher permission check when changing class/section
+        # Teacher permission check when changing class/section
         if role.lower() == "teacher":
 
-            if not target_class or not target_section:
+            if target_class == "ALL_ASSIGNED":
 
-                cursor.close()
-                conn.close()
+                allowed = teacher_has_any_class_permission(
+                    cursor,
+                    teacher_id
+                )
 
-                return jsonify({
-                    "success": False,
-                    "message": "Class and section are required"
-                }), 400
+                if not allowed:
 
-            allowed = teacher_has_class_permission(
-                cursor,
-                teacher_id,
-                target_class,
-                target_section
-            )
+                    cursor.close()
+                    conn.close()
 
-            if not allowed:
+                    return jsonify({
+                        "success": False,
+                        "message": "You are not assigned to any class"
+                    }), 403
 
-                cursor.close()
-                conn.close()
+                target_section = None
 
-                return jsonify({
-                    "success": False,
-                    "message": "You are not assigned to this class and section"
-                }), 403
+            else:
+
+                if not target_class or not target_section:
+
+                    cursor.close()
+                    conn.close()
+
+                    return jsonify({
+                        "success": False,
+                        "message": "Class and section are required"
+                    }), 400
+
+                allowed = teacher_has_class_permission(
+                    cursor,
+                    teacher_id,
+                    target_class,
+                    target_section
+                )
+
+                if not allowed:
+
+                    cursor.close()
+                    conn.close()
+
+                    return jsonify({
+                        "success": False,
+                        "message": "You are not assigned to this class and section"
+                    }), 403
 
         cursor.execute("""
             UPDATE announcements

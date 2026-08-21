@@ -46,8 +46,64 @@ bool marksLoaded = false;
   // ASSESSMENT
   // ===========================================================
 
-  String selectedAssessment = "Monthly";
+  String selectedAssessment = "Monthly Test";
+  String? selectedMonth;
+  String selectedCategory = "Academic";
+  String selectedViewCategory = "Academic";
 
+final List<String> assessmentCategories = [
+  "Academic",
+  "Extracurricular",
+];
+
+final List<String> months = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+String? selectedActivityCategory;
+String? selectedActivity;
+String? selectedAchievement;
+String? selectedLevel;
+
+final List<String> activityCategories = [
+  "Sports",
+  "Dance",
+  "Singing",
+  "Drawing",
+  "Speech Competition",
+];
+
+final List<String> sportsActivities = [
+  "Volleyball",
+  "Football",
+  "Running Race",
+];
+
+final List<String> achievements = [
+  "Participated",
+  "First Prize",
+  "Second Prize",
+  "Third Prize",
+  "Selected for Next Level",
+];
+
+final List<String> levels = [
+  "Class",
+  "School",
+  "District",
+  "State",
+  "National",
+];
   // ===========================================================
   // SUBJECTS
   // ===========================================================
@@ -313,60 +369,55 @@ void _initializeMarkControllers() {
               // CLASS + SECTION
               // =================================================
 
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _buildDropdownField(
-                      label: "Class",
-                      hint: "Select Class",
-                      value: selectedClass,
-                      items: assignedClasses
-    .map((item) => item["class"]!)
-    .toSet()
-    .toList(),
-                     onChanged: (value) {
-  setState(() {
-    selectedClass = value;
-    selectedSection = null;
-    selectedStudentId = null;
-    students = [];
+             Column(
+  children: [
+    _buildDropdownField(
+      label: "Class",
+      hint: "Select Class",
+      value: selectedClass,
+      items: assignedClasses
+          .map((item) => item["class"]!)
+          .toSet()
+          .toList(),
+      onChanged: (value) {
+        setState(() {
+          selectedClass = value;
+          selectedSection = null;
+          selectedStudentId = null;
+          students = [];
 
-    _initializeMarkControllers();
-  });
-},
-                    ),
-                  ),
+          _initializeMarkControllers();
+        });
+      },
+    ),
 
-                  const SizedBox(width: 15),
+    const SizedBox(height: 15),
 
-                  Expanded(
-  child: _buildDropdownField(
-    label: "Section",
-    hint: selectedClass == null
-        ? "Select Class First"
-        : "Select Section",
-    value: selectedSection,
-    items: assignedClasses
-        .where(
-          (item) => item["class"] == selectedClass,
-        )
-        .map((item) => item["section"]!)
-        .toSet()
-        .toList(),
-    onChanged: selectedClass == null
-        ? (_) {}
-        : (value) {
-            setState(() {
-              selectedSection = value;
-              selectedStudentId = null;
-              students = [];
-            });
-          },
-  ),
+    _buildDropdownField(
+      label: "Section",
+      hint: selectedClass == null
+          ? "Select Class First"
+          : "Select Section",
+      value: selectedSection,
+      items: assignedClasses
+          .where(
+            (item) => item["class"] == selectedClass,
+          )
+          .map((item) => item["section"]!)
+          .toSet()
+          .toList(),
+      onChanged: selectedClass == null
+          ? (_) {}
+          : (value) {
+              setState(() {
+                selectedSection = value;
+                selectedStudentId = null;
+                students = [];
+              });
+            },
+    ),
+  ],
 ),
-                ],
-              ),
 
               const SizedBox(height: 20),
 
@@ -432,33 +483,120 @@ void _initializeMarkControllers() {
               // ASSESSMENT
               // =================================================
 
-              const Text(
-                "Assessment",
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
+              
+_buildDropdownField(
+  label: "Assessment Category",
+  hint: "Select Category",
+  value: selectedCategory,
+  items: assessmentCategories,
+  onChanged: (value) {
+    setState(() {
+      selectedCategory = value!;
 
-              const SizedBox(height: 12),
+      if (selectedCategory == "Extracurricular") {
+        selectedMonth = null;
+      }
+    });
+  },
+),
 
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _buildAssessmentButton("Monthly"),
-                  _buildAssessmentButton("Quarterly"),
-                  _buildAssessmentButton("Half Yearly"),
-                  _buildAssessmentButton("Annual"),
-                ],
-              ),
+if (selectedCategory == "Academic") ...[
+  const SizedBox(height: 15),
 
-              const SizedBox(height: 30),
+  Wrap(
+    spacing: 10,
+    runSpacing: 10,
+    children: [
+      _buildAssessmentButton("Monthly Test"),
+      _buildAssessmentButton("Quarterly"),
+      _buildAssessmentButton("Half Yearly"),
+      _buildAssessmentButton("Annual"),
+    ],
+  ),
+],
+if (selectedCategory == "Academic" &&
+    selectedAssessment == "Monthly Test") ...[
+        const SizedBox(height: 15),
 
-              // =================================================
-              // SUBJECT MARKS
-              // =================================================
+  _buildDropdownField(
+    label: "Month",
+    hint: "Select Month",
+    value: selectedMonth,
+    items: months,
+    onChanged: (value) {
+      setState(() {
+        selectedMonth = value;
+      });
+    },
+  ),
+],
+              if (selectedCategory == "Extracurricular") ...[
+  const SizedBox(height: 20),
+
+  _buildDropdownField(
+    label: "Activity Category",
+    hint: "Select Category",
+    value: selectedActivityCategory,
+    items: activityCategories,
+    onChanged: (value) {
+      setState(() {
+        selectedActivityCategory = value!;
+        selectedActivity = null;
+      });
+    },
+  ),
+
+  if (selectedActivityCategory == "Sports") ...[
+    const SizedBox(height: 15),
+
+    _buildDropdownField(
+      label: "Activity",
+      hint: "Select Activity",
+      value: selectedActivity,
+      items: sportsActivities,
+      onChanged: (value) {
+        setState(() {
+          selectedActivity = value;
+        });
+      },
+    ),
+  ],
+
+  const SizedBox(height: 15),
+
+  _buildDropdownField(
+    label: "Achievement",
+    hint: "Select Achievement",
+    value: selectedAchievement,
+    items: achievements,
+    onChanged: (value) {
+      setState(() {
+        selectedAchievement = value;
+      });
+    },
+  ),
+
+  const SizedBox(height: 15),
+
+  _buildDropdownField(
+    label: "Level",
+    hint: "Select Level",
+    value: selectedLevel,
+    items: levels,
+    onChanged: (value) {
+      setState(() {
+        selectedLevel = value;
+      });
+    },
+  ),
+],
+
+const SizedBox(height: 30),
+if (selectedCategory == "Academic") ...[
+
+// =================================================
+// SUBJECT MARKS
+// =================================================
 
               const Text(
                 "Subject Marks",
@@ -477,7 +615,7 @@ void _initializeMarkControllers() {
                   child: _buildSubjectMarkField(subject),
                 ),
               ),
-
+],
               const SizedBox(height: 13),
 
               // =================================================
@@ -636,6 +774,12 @@ Future<void> _loadAssignedClasses() async {
 // ===========================================================
 
 Future<void> _loadMarks() async {
+  if (selectedStudentId == null) {
+  _showMessage(
+    "Please select a student.",
+  );
+  return;
+}
   if (selectedClass == null) {
     _showMessage(
       "Please select a class.",
@@ -649,7 +793,14 @@ Future<void> _loadMarks() async {
     );
     return;
   }
-
+  if (selectedViewCategory == "Academic" &&
+    selectedAssessment == "Monthly Test" &&
+    selectedMonth == null) {
+  _showMessage(
+    "Please select the month for Monthly Test.",
+  );
+  return;
+}
   setState(() {
     isLoadingMarks = true;
     marksLoaded = false;
@@ -660,7 +811,15 @@ Future<void> _loadMarks() async {
     final result = await ApiService.getMarks(
   studentClass: selectedClass!,
   section: selectedSection!,
-  assessmentType: selectedAssessment,
+  studentId: selectedStudentId!,
+  assessmentType: selectedViewCategory == "Academic"
+      ? selectedAssessment
+      : null,
+  assessmentCategory: selectedViewCategory,
+  month: selectedViewCategory == "Academic" &&
+          selectedAssessment == "Monthly Test"
+      ? selectedMonth
+      : null,
   teacherId: Session.teacherId,
 );
 
@@ -736,7 +895,14 @@ Future<void> _saveMarks() async {
     );
     return;
   }
-
+  if (selectedCategory == "Academic" &&
+    selectedAssessment == "Monthly Test" &&
+    selectedMonth == null) {
+  _showMessage(
+    "Please select the month for Monthly Test.",
+  );
+  return;
+}
   // ---------------------------------------------------------
   // CHECK TEACHER
   // ---------------------------------------------------------
@@ -752,37 +918,133 @@ Future<void> _saveMarks() async {
   // CHECK ALL SUBJECT MARKS
   // ---------------------------------------------------------
 
-  final Map<String, double> enteredMarks = {};
+  // ---------------------------------------------------------
+// EXTRACURRICULAR VALIDATION
+// ---------------------------------------------------------
 
-  for (final subject in subjects) {
-    final text = markControllers[subject]!.text.trim();
-
-    // Every subject is required.
-    if (text.isEmpty) {
-      _showMessage(
-        "Please enter marks for $subject.",
-      );
-      return;
-    }
-
-    final double? mark = double.tryParse(text);
-
-    if (mark == null) {
-      _showMessage(
-        "Please enter a valid number for $subject.",
-      );
-      return;
-    }
-
-    if (mark < 0 || mark > 100) {
-      _showMessage(
-        "$subject marks must be between 0 and 100.",
-      );
-      return;
-    }
-
-    enteredMarks[subject] = mark;
+if (selectedCategory == "Extracurricular") {
+  if (selectedActivityCategory == null) {
+    _showMessage("Please select an activity category.");
+    return;
   }
+
+  if (selectedActivityCategory == "Sports" &&
+      selectedActivity == null) {
+    _showMessage("Please select a sports activity.");
+    return;
+  }
+
+  if (selectedAchievement == null) {
+    _showMessage("Please select an achievement.");
+    return;
+  }
+
+  if (selectedLevel == null) {
+    _showMessage("Please select a level.");
+    return;
+  }
+
+  // ---------------------------------------------------------
+  // SHOW LOADING
+  // ---------------------------------------------------------
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    },
+  );
+
+  try {
+    await ApiService.addMarks(
+      studentId: selectedStudentId!,
+      teacherId: Session.teacherId!,
+      subject: selectedActivity ?? selectedActivityCategory!,
+assessmentType: "Extracurricular",
+      assessmentCategory: "Extracurricular",
+      assessmentName: selectedActivity ?? selectedActivityCategory!,
+      assessmentDate:
+          DateTime.now().toIso8601String().split("T").first,
+      academicYear:
+          "${DateTime.now().year}-${DateTime.now().year + 1}",
+      month: null,
+
+      // Extracurricular records don't contain academic marks.
+      marksObtained: null,
+      totalMarks: null,
+      teacherRemarks: null,
+
+      // Extracurricular details
+      activityCategory: selectedActivityCategory,
+      activity: selectedActivity,
+      achievement: selectedAchievement,
+      level: selectedLevel,
+    );
+
+    if (!mounted) return;
+
+    Navigator.pop(context);
+
+    _showMessage(
+      "Extracurricular activity saved successfully.",
+    );
+
+    setState(() {
+      selectedActivityCategory = null;
+      selectedActivity = null;
+      selectedAchievement = null;
+      selectedLevel = null;
+    });
+  } catch (e) {
+    if (!mounted) return;
+
+    Navigator.pop(context);
+
+    _showMessage(
+      "Failed to save extracurricular activity. Please try again.",
+    );
+  }
+
+  return;
+}
+
+// ---------------------------------------------------------
+// ACADEMIC MARK VALIDATION
+// ---------------------------------------------------------
+
+final Map<String, double> enteredMarks = {};
+
+for (final subject in subjects) {
+  final text = markControllers[subject]!.text.trim();
+
+  if (text.isEmpty) {
+    _showMessage(
+      "Please enter marks for $subject.",
+    );
+    return;
+  }
+
+  final double? mark = double.tryParse(text);
+
+  if (mark == null) {
+    _showMessage(
+      "Please enter a valid number for $subject.",
+    );
+    return;
+  }
+
+  if (mark < 0 || mark > 100) {
+    _showMessage(
+      "$subject marks must be between 0 and 100.",
+    );
+    return;
+  }
+
+  enteredMarks[subject] = mark;
+}
 
   // ---------------------------------------------------------
   // SHOW LOADING
@@ -818,10 +1080,8 @@ Future<void> _saveMarks() async {
         // Quarterly
         // Half Yearly
         // Annual
-        assessmentType: selectedAssessment,
-
-        // This represents that these are exam marks.
-        assessmentCategory: "Exam",
+assessmentType: selectedAssessment,        // This represents that these are exam marks.
+        assessmentCategory: "Academic",
 
         // Example:
         // Monthly
@@ -835,6 +1095,9 @@ Future<void> _saveMarks() async {
 
         academicYear:
             "${DateTime.now().year}-${DateTime.now().year + 1}",
+        month: selectedAssessment == "Monthly Test"
+    ? selectedMonth
+    : null,
 
         marksObtained: marksObtained,
 
@@ -1079,70 +1342,82 @@ Future<void> _saveMarks() async {
   // ===========================================================
 
   Widget _buildAssessmentButton(String title) {
-    final bool selected = selectedAssessment == title;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(10),
-
-      onTap: () {
-        setState(() {
-          selectedAssessment = title;
-        });
-      },
-
-      child: Container(
-        decoration: BoxDecoration(
-          color: selected
-              ? MarksScreen.primaryBlue
-              : Colors.white,
-
-          borderRadius: BorderRadius.circular(10),
-
-          border: Border.all(
-            color: selected
-                ? MarksScreen.primaryBlue
-                : Colors.grey.shade300,
-          ),
-        ),
-
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 18,
-            vertical: 12,
-          ),
-
-          child: Text(
-            title,
-            style: TextStyle(
-              color: selected
-                  ? Colors.white
-                  : Colors.black87,
-
-              fontSize: 14,
-
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ===========================================================
-// VIEW ASSESSMENT BUTTON
-// ===========================================================
-
-Widget _buildViewAssessmentButton(String title) {
-  final bool selected = selectedAssessment == title;
+  final String assessmentValue = title;
+  final bool selected = selectedAssessment == assessmentValue;
 
   return InkWell(
     borderRadius: BorderRadius.circular(10),
 
     onTap: () {
       setState(() {
-        selectedAssessment = title;
+        selectedAssessment = assessmentValue;
+
+        // Clear month when switching away from Monthly
+        if (assessmentValue != "Monthly Test") {
+          selectedMonth = null;
+        }
+      });
+    },
+
+    child: Container(
+      decoration: BoxDecoration(
+        color: selected
+            ? MarksScreen.primaryBlue
+            : Colors.white,
+
+        borderRadius: BorderRadius.circular(10),
+
+        border: Border.all(
+          color: selected
+              ? MarksScreen.primaryBlue
+              : Colors.grey.shade300,
+        ),
+      ),
+
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 12,
+        ),
+
+        child: Text(
+          title,
+          style: TextStyle(
+            color: selected
+                ? Colors.white
+                : Colors.black87,
+
+            fontSize: 14,
+
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+  // ===========================================================
+// VIEW ASSESSMENT BUTTON
+// ===========================================================
+
+Widget _buildViewAssessmentButton(String title) {
+  final String assessmentValue = title;
+  final bool selected = selectedAssessment == assessmentValue;
+
+  return InkWell(
+    borderRadius: BorderRadius.circular(10),
+
+    onTap: () {
+      setState(() {
+        selectedAssessment = assessmentValue;
+
         viewMarks = [];
         marksLoaded = false;
+
+        if (assessmentValue != "Monthly Test") {
+          selectedMonth = null;
+        }
       });
     },
 
@@ -1310,135 +1585,225 @@ Widget _buildViewMarksPage(BuildContext context) {
             // CLASS + SECTION
             // =================================================
 
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            // =================================================
+// CLASS + SECTION
+// =================================================
 
-                Expanded(
-  child: _buildDropdownField(
-    label: "Class",
-    hint: isLoadingAssignedClasses
-        ? "Loading Classes..."
-        : "Select Class",
-    value: selectedClass,
-    items: assignedClasses
-        .map((item) => item["class"]!)
-        .toSet()
-        .toList(),
-    onChanged: (value) {
-      setState(() {
-        selectedClass = value;
-        selectedSection = null;
-        viewMarks = [];
-        marksLoaded = false;
-      });
-    },
-  ),
+Column(
+  children: [
+    _buildDropdownField(
+      label: "Class",
+      hint: isLoadingAssignedClasses
+          ? "Loading Classes..."
+          : "Select Class",
+      value: selectedClass,
+      items: assignedClasses
+          .map((item) => item["class"]!)
+          .toSet()
+          .toList(),
+      onChanged: (value) {
+        setState(() {
+          selectedClass = value;
+          selectedSection = null;
+          selectedStudentId = null;
+students = [];
+          viewMarks = [];
+          marksLoaded = false;
+        });
+      },
+    ),
+
+    const SizedBox(height: 15),
+
+    _buildDropdownField(
+      label: "Section",
+      hint: selectedClass == null
+          ? "Select Class First"
+          : "Select Section",
+      value: selectedSection,
+      items: assignedClasses
+          .where(
+            (item) => item["class"] == selectedClass,
+          )
+          .map((item) => item["section"]!)
+          .toSet()
+          .toList(),
+      onChanged: selectedClass == null
+    ? (_) {}
+    : (value) {
+        setState(() {
+          selectedSection = value;
+          selectedStudentId = null;
+          students = [];
+          viewMarks = [];
+          marksLoaded = false;
+        });
+      },
+    ),
+  ],
 ),
 
-                const SizedBox(width: 15),
+const SizedBox(height: 20),
 
-              Expanded(
-  child: _buildDropdownField(
-    label: "Section",
-    hint: selectedClass == null
-        ? "Select Class First"
-        : "Select Section",
-    value: selectedSection,
-    items: assignedClasses
-        .where(
-          (item) => item["class"] == selectedClass,
-        )
-        .map((item) => item["section"]!)
-        .toSet()
-        .toList(),
-    onChanged: selectedClass == null
-        ? (_) {}
-        : (value) {
-            setState(() {
-              selectedSection = value;
-              viewMarks = [];
-              marksLoaded = false;
-            });
-          },
-  ),
-),
-              ],
+// =================================================
+// LOAD STUDENTS
+// =================================================
+
+SizedBox(
+  width: double.infinity,
+  height: 50,
+  child: ElevatedButton.icon(
+    onPressed: isLoadingStudents
+        ? null
+        : _loadStudents,
+
+    icon: isLoadingStudents
+        ? const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
             ),
+          )
+        : const Icon(Icons.people_alt_outlined),
 
+    label: Text(
+      isLoadingStudents
+          ? "Loading Students..."
+          : "Load Students",
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+
+    style: ElevatedButton.styleFrom(
+      backgroundColor: MarksScreen.primaryBlue,
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+    ),
+  ),
+),
+
+const SizedBox(height: 20),
+
+// =================================================
+// STUDENT
+// =================================================
+
+_buildStudentDropdown(),
             const SizedBox(height: 20),
 
             // =================================================
             // LOAD MARKS BUTTON
             // =================================================
 
-            SizedBox(
-              width: double.infinity,
-              height: 50,
 
-              child: ElevatedButton.icon(
-                onPressed: isLoadingMarks ? null : _loadMarks,
+_buildDropdownField(
+  label: "Assessment Category",
+  hint: "Select Category",
+  value: selectedViewCategory,
+  items: assessmentCategories,
+  onChanged: (value) {
+    setState(() {
+      selectedViewCategory = value!;
 
-                icon: isLoadingMarks
-    ? const SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: Colors.white,
-        ),
-      )
-    : const Icon(
-        Icons.visibility_outlined,
-      ),
+      viewMarks = [];
+      marksLoaded = false;
 
-label: Text(
-  isLoadingMarks
-      ? "Loading Marks..."
-      : "Load Marks",
-  style: const TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.bold,
-  ),
+      if (selectedViewCategory == "Extracurricular") {
+        selectedMonth = null;
+      }
+    });
+  },
 ),
 
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: MarksScreen.primaryBlue,
-                  foregroundColor: Colors.white,
+if (selectedViewCategory == "Academic") ...[
+  const SizedBox(height: 15),
 
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
+  const Text(
+    "Assessment",
+    style: TextStyle(
+      fontSize: 17,
+      fontWeight: FontWeight.bold,
+      color: Colors.black87,
+    ),
+  ),
+
+  const SizedBox(height: 12),
+
+  Wrap(
+    spacing: 10,
+    runSpacing: 10,
+    children: [
+      _buildViewAssessmentButton("Monthly Test"),
+      _buildViewAssessmentButton("Quarterly"),
+      _buildViewAssessmentButton("Half Yearly"),
+      _buildViewAssessmentButton("Annual"),
+    ],
+  ),
+],
+
+if (selectedViewCategory == "Academic" &&
+    selectedAssessment == "Monthly Test") ...[
+  const SizedBox(height: 15),
+
+  _buildDropdownField(
+    label: "Month",
+    hint: "Select Month",
+    value: selectedMonth,
+    items: months,
+    onChanged: (value) {
+      setState(() {
+        selectedMonth = value;
+        viewMarks = [];
+        marksLoaded = false;
+      });
+    },
+  ),
+],
+
+const SizedBox(height: 20),
+
+SizedBox(
+  width: double.infinity,
+  height: 50,
+  child: ElevatedButton.icon(
+    onPressed: isLoadingMarks ? null : _loadMarks,
+
+    icon: isLoadingMarks
+        ? const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
             ),
-            // =================================================
-// ASSESSMENT
-// =================================================
+          )
+        : const Icon(Icons.visibility_outlined),
 
-const Text(
-  "Assessment",
-  style: TextStyle(
-    fontSize: 17,
-    fontWeight: FontWeight.bold,
-    color: Colors.black87,
+    label: Text(
+      isLoadingMarks
+          ? "Loading Marks..."
+          : "Load Marks",
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+
+    style: ElevatedButton.styleFrom(
+      backgroundColor: MarksScreen.primaryBlue,
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+    ),
   ),
 ),
-
-const SizedBox(height: 12),
-
-Wrap(
-  spacing: 10,
-  runSpacing: 10,
-  children: [
-    _buildViewAssessmentButton("Monthly"),
-    _buildViewAssessmentButton("Quarterly"),
-    _buildViewAssessmentButton("Half Yearly"),
-    _buildViewAssessmentButton("Annual"),
-  ],
-),
-
-const SizedBox(height: 25),
 
             const SizedBox(height: 25),
 
@@ -1506,136 +1871,37 @@ const SizedBox(height: 25),
 // ===========================================================
 
 Widget _buildMarksResult() {
-  double totalObtained = 0;
-  double totalMaximum = 0;
+  // =========================================================
+  // GROUP ALL RECORDS BY STUDENT
+  // =========================================================
 
-  final Map<String, dynamic> marksBySubject = {};
+  final Map<String, List<dynamic>> recordsByStudent = {};
 
-  for (final mark in viewMarks) {
-    if (mark is Map<String, dynamic>) {
-      final subject =
-          mark["subject"]?.toString() ?? "";
+  for (final record in viewMarks) {
+    if (record is Map<String, dynamic>) {
+      final studentId =
+          record["student_id"]?.toString() ?? "";
 
-      marksBySubject[subject] = mark;
+      if (studentId.isNotEmpty) {
+        recordsByStudent.putIfAbsent(
+          studentId,
+          () => [],
+        );
 
-      final obtained =
-          double.tryParse(
-                mark["marks_obtained"]?.toString() ?? "",
-              ) ??
-              0;
-
-      final maximum =
-          double.tryParse(
-                mark["total_marks"]?.toString() ?? "",
-              ) ??
-              0;
-
-      totalObtained += obtained;
-      totalMaximum += maximum;
+        recordsByStudent[studentId]!.add(record);
+      }
     }
   }
 
-  final double percentage =
-      totalMaximum > 0
-          ? (totalObtained / totalMaximum) * 100
-          : 0;
-
-  String performance;
-
-  if (percentage >= 90) {
-    performance = "Excellent";
-  } else if (percentage >= 75) {
-    performance = "Very Good";
-  } else if (percentage >= 60) {
-    performance = "Good";
-  } else if (percentage >= 40) {
-    performance = "Average";
-  } else {
-    performance = "Needs Improvement";
+  if (recordsByStudent.isEmpty) {
+    return const SizedBox();
   }
-
-  final String studentName =
-      viewMarks.isNotEmpty &&
-              viewMarks.first is Map<String, dynamic>
-          ? viewMarks.first["student_name"]
-                  ?.toString() ??
-              "Student"
-          : "Student";
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
-
     children: [
-      // =====================================================
-      // STUDENT INFORMATION
-      // =====================================================
-
-      Container(
-        width: double.infinity,
-
-        padding: const EdgeInsets.all(18),
-
-        decoration: BoxDecoration(
-          color: Colors.white,
-
-          borderRadius:
-              BorderRadius.circular(16),
-
-          border: Border.all(
-            color: Colors.grey.shade200,
-          ),
-        ),
-
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
-
-          children: [
-            Text(
-              studentName,
-
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-
-            const SizedBox(height: 6),
-
-            Text(
-              "Class $selectedClass - Section $selectedSection",
-
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-
-            const SizedBox(height: 4),
-
-            Text(
-              selectedAssessment,
-
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: MarksScreen.primaryBlue,
-              ),
-            ),
-          ],
-        ),
-      ),
-
-      const SizedBox(height: 18),
-
-      // =====================================================
-      // SUBJECT MARKS TITLE
-      // =====================================================
-
       const Text(
-        "Subject-wise Marks",
-
+        "Student Marks",
         style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
@@ -1645,71 +1911,575 @@ Widget _buildMarksResult() {
 
       const SizedBox(height: 12),
 
-      // =====================================================
-      // SUBJECT CARDS
-      // =====================================================
+      // =======================================================
+      // EACH STUDENT
+      // =======================================================
 
-      ...subjects.map(
-        (subject) {
-          final mark =
-              marksBySubject[subject];
+      ...recordsByStudent.entries.map(
+        (entry) {
+          final studentRecords = entry.value;
 
-          return _buildViewSubjectCard(
-            subject: subject,
-            mark: mark,
+          final firstRecord = studentRecords.first;
+
+          final studentName =
+              firstRecord is Map<String, dynamic>
+                  ? firstRecord["student_name"]?.toString() ??
+                      "Student"
+                  : "Student";
+
+          // ===================================================
+          // SEPARATE ACADEMIC + EXTRACURRICULAR
+          // ===================================================
+
+          final academicRecords = studentRecords.where((record) {
+            if (record is Map<String, dynamic>) {
+              return record["assessment_category"]
+                      ?.toString()
+                      .toLowerCase() ==
+                  "academic";
+            }
+
+            return false;
+          }).toList();
+
+          final extracurricularRecords =
+              studentRecords.where((record) {
+            if (record is Map<String, dynamic>) {
+              return record["assessment_category"]
+                      ?.toString()
+                      .toLowerCase() ==
+                  "extracurricular";
+            }
+
+            return false;
+          }).toList();
+
+          // ===================================================
+          // ACADEMIC MARKS
+          // ===================================================
+
+          double totalObtained = 0;
+          double totalMaximum = 0;
+
+          final Map<String, dynamic> marksBySubject = {};
+
+          for (final record in academicRecords) {
+            if (record is Map<String, dynamic>) {
+              final subject =
+                  record["subject"]?.toString() ?? "";
+
+              if (subject.isNotEmpty) {
+                marksBySubject[subject] = record;
+              }
+
+              final obtained =
+                  double.tryParse(
+                        record["marks_obtained"]
+                                ?.toString() ??
+                            "",
+                      ) ??
+                      0;
+
+              final maximum =
+                  double.tryParse(
+                        record["total_marks"]
+                                ?.toString() ??
+                            "",
+                      ) ??
+                      0;
+
+              totalObtained += obtained;
+              totalMaximum += maximum;
+            }
+          }
+
+          final percentage = totalMaximum > 0
+              ? (totalObtained / totalMaximum) * 100
+              : 0;
+
+          String performance;
+
+          if (percentage >= 90) {
+            performance = "Excellent";
+          } else if (percentage >= 75) {
+            performance = "Very Good";
+          } else if (percentage >= 60) {
+            performance = "Good";
+          } else if (percentage >= 40) {
+            performance = "Average";
+          } else {
+            performance = "Needs Improvement";
+          }
+
+          // ===================================================
+          // STUDENT CARD
+          // ===================================================
+
+          return Container(
+            width: double.infinity,
+
+            margin: const EdgeInsets.only(bottom: 14),
+
+            padding: const EdgeInsets.all(14),
+
+            decoration: BoxDecoration(
+              color: Colors.white,
+
+              borderRadius: BorderRadius.circular(16),
+
+              border: Border.all(
+                color: Colors.grey.shade200,
+              ),
+            ),
+
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+
+              children: [
+
+                // =============================================
+                // STUDENT NAME
+                // =============================================
+
+                Text(
+                  studentName,
+
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+
+                const SizedBox(height: 5),
+
+                Text(
+                  "Class $selectedClass - Section $selectedSection",
+
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                ),
+
+                const SizedBox(height: 15),
+
+                // =============================================
+                // ACADEMIC MARKS
+                // =============================================
+
+                if (selectedViewCategory == "Academic" &&
+    academicRecords.isNotEmpty) ...[
+                  const Text(
+                    "Academic Marks",
+
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    selectedAssessment,
+
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: MarksScreen.primaryBlue,
+                    ),
+                  ),
+
+                  if (selectedAssessment == "Monthly Test" &&
+                      selectedMonth != null) ...[
+                    const SizedBox(height: 3),
+
+                    Text(
+                      selectedMonth!,
+
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 10),
+
+                  // =========================================
+                  // SUBJECT MARKS
+                  // =========================================
+
+                  ...subjects.map(
+                    (subject) {
+                      final mark =
+                          marksBySubject[subject];
+
+                      return _buildViewSubjectCard(
+                        subject: subject,
+                        mark: mark,
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // =========================================
+                  // SUMMARY
+                  // =========================================
+
+                  Container(
+                    width: double.infinity,
+
+                    padding:
+                        const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+
+                    decoration: BoxDecoration(
+                      color: const Color(0xffF5F7FB),
+
+                      borderRadius:
+                          BorderRadius.circular(12),
+                    ),
+
+                    child: Column(
+                      children: [
+                        _buildSummaryRow(
+                          "Total Marks",
+                          "${_formatNumber(totalObtained)} / ${_formatNumber(totalMaximum)}",
+                        ),
+
+                        const Divider(height: 22),
+
+                        _buildSummaryRow(
+                          "Percentage",
+                          "${percentage.toStringAsFixed(2)}%",
+                        ),
+
+                        const Divider(height: 22),
+
+                        _buildSummaryRow(
+                          "Performance",
+                          performance,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // =============================================
+                // SPACE BETWEEN ACADEMIC AND EXTRA
+                // =============================================
+
+                if (academicRecords.isNotEmpty &&
+                    extracurricularRecords.isNotEmpty)
+                  const SizedBox(height: 18),
+
+                // =============================================
+                // EXTRACURRICULAR ACTIVITIES
+                // =============================================
+
+                if (extracurricularRecords.isNotEmpty) ...[
+                  const Divider(height: 1),
+
+                  const SizedBox(height: 15),
+
+                  const Text(
+                    "Extracurricular Activities",
+
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  ...extracurricularRecords.map(
+                    (record) =>
+                        _buildExtracurricularCard(record),
+                  ),
+                ],
+
+                // =============================================
+                // NO DATA
+                // =============================================
+
+                if (academicRecords.isEmpty &&
+                    extracurricularRecords.isEmpty)
+                  const Text(
+                    "No marks or extracurricular activities recorded.",
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 14,
+                    ),
+                  ),
+              ],
+            ),
           );
         },
-      ),
-
-      const SizedBox(height: 18),
-
-      // =====================================================
-      // SUMMARY
-      // =====================================================
-
-      Container(
-        width: double.infinity,
-
-        padding: const EdgeInsets.all(20),
-
-        decoration: BoxDecoration(
-          color: Colors.white,
-
-          borderRadius:
-              BorderRadius.circular(16),
-
-          border: Border.all(
-            color: Colors.grey.shade200,
-          ),
-        ),
-
-        child: Column(
-          children: [
-            _buildSummaryRow(
-              "Total Marks",
-              "${_formatNumber(totalObtained)} / ${_formatNumber(totalMaximum)}",
-            ),
-
-            const Divider(height: 25),
-
-            _buildSummaryRow(
-              "Percentage",
-              "${percentage.toStringAsFixed(2)}%",
-            ),
-
-            const Divider(height: 25),
-
-            _buildSummaryRow(
-              "Performance",
-              performance,
-            ),
-          ],
-        ),
       ),
     ],
   );
 }
 
+Widget _buildExtracurricularCard(dynamic record) {
+  if (record is! Map<String, dynamic>) {
+    return const SizedBox();
+  }
+
+  final activityCategory =
+      record["activity_category"]?.toString() ?? "";
+
+  final activity =
+      record["activity"]?.toString() ?? "";
+
+  final achievement =
+      record["achievement"]?.toString() ?? "";
+
+  final level =
+      record["level"]?.toString() ?? "";
+
+  final activityDate =
+      record["assessment_date"]?.toString() ?? "";
+
+  final displayActivity =
+      activity.isNotEmpty ? activity : activityCategory;
+
+  return Container(
+    width: double.infinity,
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.all(12),
+
+    decoration: BoxDecoration(
+      color: const Color(0xffF5F7FB),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: Colors.grey.shade200,
+      ),
+    ),
+
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+
+        // Singing + Date
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 105,
+              child: Text(
+                displayActivity,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.normal,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+
+            Expanded(
+              child: Text(
+                activityDate.isNotEmpty
+                    ? _formatDate(activityDate)
+                    : "",
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.normal,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 5),
+
+        // Achievement + Second Prize
+        if (achievement.isNotEmpty)
+          _buildActivityDetailRow(
+            "Achievement",
+            achievement,
+          ),
+
+        const SizedBox(height: 5),
+
+        // Level + School
+        if (level.isNotEmpty)
+          _buildActivityDetailRow(
+            "Level",
+            level,
+          ),
+      ],
+    ),
+  );
+}
+
+
+Widget _buildActivityDetailRow(
+  String title,
+  String value,
+) {
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      SizedBox(
+        width: 105,
+        child: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.normal,
+            color: Colors.black,
+          ),
+        ),
+      ),
+
+      Expanded(
+        child: Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.normal,
+            color: Colors.black,
+          ),
+        ),
+      ),
+    ],
+  );
+}
+String _formatDate(String date) {
+  try {
+    // Example input:
+    // 2026-08-21
+    // Fri, 21 Aug 2026 00:00:00 GMT
+
+    int day;
+    int month;
+    int year;
+
+    // -----------------------------------------------
+    // Handle ISO date: 2026-08-21
+    // -----------------------------------------------
+
+    final isoMatch = RegExp(
+      r'^(\d{4})-(\d{2})-(\d{2})',
+    ).firstMatch(date);
+
+    if (isoMatch != null) {
+      year = int.parse(isoMatch.group(1)!);
+      month = int.parse(isoMatch.group(2)!);
+      day = int.parse(isoMatch.group(3)!);
+    } else {
+
+      // ---------------------------------------------
+      // Handle:
+      // Fri, 21 Aug 2026 00:00:00 GMT
+      // ---------------------------------------------
+
+      final httpMatch = RegExp(
+        r'^[A-Za-z]{3},\s+(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})',
+      ).firstMatch(date);
+
+      if (httpMatch == null) {
+        return date;
+      }
+
+      day = int.parse(httpMatch.group(1)!);
+      year = int.parse(httpMatch.group(3)!);
+
+      const monthNumbers = {
+        "Jan": 1,
+        "Feb": 2,
+        "Mar": 3,
+        "Apr": 4,
+        "May": 5,
+        "Jun": 6,
+        "Jul": 7,
+        "Aug": 8,
+        "Sep": 9,
+        "Oct": 10,
+        "Nov": 11,
+        "Dec": 12,
+      };
+
+      month = monthNumbers[httpMatch.group(2)!] ?? 1;
+    }
+
+    // -----------------------------------------------
+    // Month name
+    // -----------------------------------------------
+
+    const monthNames = [
+      "",
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+
+    // -----------------------------------------------
+    // Day suffix
+    // -----------------------------------------------
+
+    String suffix;
+
+    if (day >= 11 && day <= 13) {
+      suffix = "th";
+    } else {
+      switch (day % 10) {
+        case 1:
+          suffix = "st";
+          break;
+        case 2:
+          suffix = "nd";
+          break;
+        case 3:
+          suffix = "rd";
+          break;
+        default:
+          suffix = "th";
+      }
+    }
+
+    // -----------------------------------------------
+    // Calculate actual weekday
+    // -----------------------------------------------
+
+    final parsedDate = DateTime(year, month, day);
+
+    const weekdays = [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+      "Sun",
+    ];
+
+    final weekday = weekdays[parsedDate.weekday - 1];
+
+    return "$weekday, $day$suffix ${monthNames[month]} $year";
+  } catch (e) {
+    return date;
+  }
+}
 // ===========================================================
 // VIEW SUBJECT CARD
 // ===========================================================
@@ -1722,10 +2492,12 @@ Widget _buildViewSubjectCard({
     return Container(
       width: double.infinity,
 
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 7),
 
-      padding: const EdgeInsets.all(16),
-
+      padding: const EdgeInsets.symmetric(
+  horizontal: 14,
+  vertical: 10,
+),
       decoration: BoxDecoration(
         color: Colors.white,
 
@@ -1786,10 +2558,12 @@ Widget _buildViewSubjectCard({
   return Container(
     width: double.infinity,
 
-    margin: const EdgeInsets.only(bottom: 10),
+    margin: const EdgeInsets.only(bottom: 7),
 
-    padding: const EdgeInsets.all(16),
-
+padding: const EdgeInsets.symmetric(
+  horizontal: 14,
+  vertical: 10,
+),
     decoration: BoxDecoration(
       color: Colors.white,
 
@@ -1871,7 +2645,7 @@ Widget _buildSummaryRow(
         title,
 
         style: const TextStyle(
-          fontSize: 15,
+          fontSize: 14,
           fontWeight: FontWeight.w600,
           color: Colors.black87,
         ),
@@ -1881,7 +2655,7 @@ Widget _buildSummaryRow(
         value,
 
         style: const TextStyle(
-          fontSize: 16,
+          fontSize: 15,
           fontWeight: FontWeight.bold,
           color: MarksScreen.primaryBlue,
         ),

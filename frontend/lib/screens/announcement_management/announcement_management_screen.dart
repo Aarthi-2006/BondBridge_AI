@@ -42,6 +42,7 @@ class _AnnouncementManagementScreenState
   String? selectedAudience = "All";
   String? selectedClass;
 String? selectedSection;
+bool selectAllTeacherClasses = false;
 
 List<String> teacherClasses = [];
 List<String> teacherSections = [];
@@ -83,6 +84,7 @@ Future<void> loadTeacherClasses() async {
 
     if (teacherClasses.isNotEmpty) {
       selectedClass = teacherClasses.first;
+
       teacherSections =
           ClassPermissionService.getAvailableSections(
         selectedClass!,
@@ -190,7 +192,7 @@ Future<void> loadTeacherClasses() async {
   messageController.clear();
 
   selectedAudience = "All";
-
+  selectAllTeacherClasses = false;
   selectedClass = null;
   selectedSection = null;
 
@@ -270,19 +272,20 @@ Future<void> loadTeacherClasses() async {
       Session.role?.toLowerCase() == "teacher";
 
   if (isTeacher &&
-      (selectedClass == null ||
-       selectedSection == null)) {
+    !selectAllTeacherClasses &&
+    (selectedClass == null ||
+     selectedSection == null)) {
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          "Please select class and section",
-        ),
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text(
+        "Please select class and section",
       ),
-    );
+    ),
+  );
 
-    return;
-  }
+  return;
+}
 
   setState(() {
     isLoading = true;
@@ -301,11 +304,15 @@ Future<void> loadTeacherClasses() async {
   // Teacher announcements must contain class + section
   if (isTeacher) {
 
+  if (selectAllTeacherClasses) {
+    data["target_class"] = "ALL_ASSIGNED";
+    data["target_section"] = null;
+  } else {
     data["target_class"] = selectedClass;
-
     data["target_section"] = selectedSection;
-
   }
+
+}
 
   Map<String, dynamic> result;
 
@@ -423,6 +430,52 @@ Future<void> loadTeacherClasses() async {
     super.dispose();
   }
 
+String formatAnnouncementDate(dynamic date) {
+  if (date == null) return "";
+
+  final value = date.toString().trim();
+
+  // Format: Fri, 21 Aug 2026 ...
+  final match = RegExp(
+    r'^\w+,\s+(\d{1,2})\s+(\w+)\s+(\d{4})',
+  ).firstMatch(value);
+
+  if (match != null) {
+    final day = match.group(1)!.padLeft(2, '0');
+    final monthName = match.group(2)!;
+    final year = match.group(3)!;
+
+    const months = {
+      "Jan": "01",
+      "Feb": "02",
+      "Mar": "03",
+      "Apr": "04",
+      "May": "05",
+      "Jun": "06",
+      "Jul": "07",
+      "Aug": "08",
+      "Sep": "09",
+      "Oct": "10",
+      "Nov": "11",
+      "Dec": "12",
+    };
+
+    final month = months[monthName];
+
+    if (month != null) {
+      return "$day/$month/$year";
+    }
+  }
+
+  // Format: 2026-08-21
+  final parts = value.split(" ")[0].split("-");
+
+  if (parts.length == 3) {
+    return "${parts[2]}/${parts[1]}/${parts[0]}";
+  }
+
+  return value;
+}
   //=====================================================
   // BUILD
   //=====================================================
@@ -710,7 +763,7 @@ Future<void> loadTeacherClasses() async {
                                         const SizedBox(width: 6),
 
                                        Text(
-  "Posted On : ${announcement["created_at"]?.toString().split(" ")[0] ?? ""}",
+  "Posted On : ${formatAnnouncementDate(announcement["created_at"])}",
 ),
                                       ],
 
@@ -918,25 +971,39 @@ if (
   const SizedBox(height: 15),
 
   DropdownButtonFormField<String>(
-    initialValue: selectedClass,
-    decoration: const InputDecoration(
-      labelText: "Class",
+  initialValue: selectAllTeacherClasses
+    ? "ALL_ASSIGNED"
+      : selectedClass,
+  decoration: const InputDecoration(
+    labelText: "Class",
+  ),
+  items: [
+    const DropdownMenuItem<String>(
+  value: "ALL_ASSIGNED",
+      child: Text("All Assigned Classes"),
     ),
-    items: teacherClasses.map((className) {
+    ...teacherClasses
+    .where((className) => className != "ALL_ASSIGNED")
+    .map((className) {
       return DropdownMenuItem<String>(
         value: className,
         child: Text(className),
       );
-    }).toList(),
-    onChanged: (value) {
-
-      setState(() {
-
+    }),
+  ],
+  onChanged: (value) {
+    setState(() {
+if (value == "ALL_ASSIGNED") {
+          selectAllTeacherClasses = true;
+        selectedClass = null;
+        selectedSection = null;
+        teacherSections = [];
+      } else {
+        selectAllTeacherClasses = false;
         selectedClass = value;
 
         teacherSections =
-            ClassPermissionService
-                .getAvailableSections(
+            ClassPermissionService.getAvailableSections(
           value!,
         );
 
@@ -944,21 +1011,19 @@ if (
             teacherSections.isNotEmpty
                 ? teacherSections.first
                 : null;
-
-      });
-
-    },
-    validator: (value) {
-
-      if (Session.role?.toLowerCase() == "teacher" &&
-          value == null) {
-        return "Required";
       }
+    });
+  },
+  validator: (value) {
+    if (Session.role?.toLowerCase() == "teacher" &&
+        value == null) {
+      return "Required";
+    }
 
-      return null;
-    },
-  ),
-
+    return null;
+  },
+),
+  if (!selectAllTeacherClasses) ...[
   const SizedBox(height: 15),
 
   DropdownButtonFormField<String>(
@@ -978,8 +1043,8 @@ if (
       });
     },
     validator: (value) {
-
       if (Session.role?.toLowerCase() == "teacher" &&
+          !selectAllTeacherClasses &&
           value == null) {
         return "Required";
       }
@@ -987,6 +1052,7 @@ if (
       return null;
     },
   ),
+],
 ],
 
                     const SizedBox(height: 15),
