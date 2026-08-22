@@ -925,11 +925,14 @@ static Future<Map<String, dynamic>> getAnnouncements() async {
       params["teacher_id"] = Session.teacherId.toString();
     }
 
-    if ((role.toLowerCase() == "student" ||
-            role.toLowerCase() == "parent") &&
+    if (role.toLowerCase() == "student" &&
         Session.userId != null) {
       params["user_id"] = Session.userId.toString();
     }
+    if (role.toLowerCase() == "parent" &&
+    Session.parentId != null) {
+  params["user_id"] = Session.parentId.toString();
+}
 
     final uri = Uri.parse("$baseUrl/announcements")
         .replace(queryParameters: params);
@@ -1195,6 +1198,72 @@ static Future<Map<String, dynamic>> viewStudentAttendance({
   }
 }
 // ======================================
+// GET PARENT'S CHILDREN
+// ======================================
+
+static Future<List<dynamic>> getParentChildren({
+  required int parentId,
+}) async {
+  try {
+    final response = await http.get(
+      Uri.parse(
+        "$baseUrl/parent_children/$parentId",
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      if (data["success"] == true &&
+          data["children"] is List) {
+        return data["children"];
+      }
+
+      return [];
+    }
+
+    return [];
+  } catch (e) {
+    return [];
+  }
+}
+// ======================================
+// GET PARENT PROFILE
+// ======================================
+
+static Future<Map<String, dynamic>> getParentProfile(
+    int parentId,
+) async {
+
+  try {
+
+    final response = await http.get(
+      Uri.parse(
+        "$baseUrl/parent_profile/$parentId",
+      ),
+    );
+
+    if (response.statusCode == 200) {
+
+      return jsonDecode(response.body);
+
+    }
+
+    return {
+      "success": false,
+      "message": "Failed to load parent profile",
+    };
+
+  } catch (e) {
+
+    return {
+      "success": false,
+      "message": "Unable to connect to server",
+    };
+
+  }
+}
+// ======================================
 // GET MARKS
 // ======================================
 
@@ -1206,6 +1275,7 @@ static Future<List> getMarks({
   String? assessmentCategory,
   String? month,
   int? teacherId,
+  int? parentId,
 }) async {
   try {
     final params = <String, String>{};
@@ -1272,7 +1342,10 @@ static Future<List> getMarks({
       params["teacher_id"] =
           teacherId.toString();
     }
-
+    if (parentId != null) {
+  params["parent_id"] =
+      parentId.toString();
+}
     // =========================================================
     // API REQUEST
     // =========================================================

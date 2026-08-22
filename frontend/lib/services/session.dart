@@ -1,5 +1,6 @@
 class Session {
   static int? userId;
+  static int? parentId;
   static int? teacherId;
   static int? studentId;
   static String? studentClass;

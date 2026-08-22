@@ -102,6 +102,7 @@ Future<void> loadTeacherClasses() async {
   //=====================================================
 
   Future<void> loadAnnouncements() async {
+    
 
     setState(() {
       isLoading = true;
@@ -112,14 +113,14 @@ Future<void> loadTeacherClasses() async {
       final response =
           await ApiService.getAnnouncements();
 
-      if (response["success"] == true) {
+      if (response["announcements"] is List) {
 
-        announcements =
-            response["announcements"] ?? [];
+  announcements =
+      response["announcements"];
 
-        filteredAnnouncements =
-            List.from(announcements);
-      }
+  filteredAnnouncements =
+      List.from(announcements);
+}
 
     } catch (e) {
 

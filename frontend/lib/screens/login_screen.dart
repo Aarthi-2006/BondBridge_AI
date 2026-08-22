@@ -54,12 +54,17 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       if (result["message"] == "Login successful") {
-       Session.userId = result["user"]["user_id"];
+      Session.userId = result["user"]["user_id"];
+
+Session.parentId = result["user"]["parent_id"];
 
 Session.teacherId = result["user"]["teacher_id"];
 
-Session.studentId = result["user"]["student_id"];
-
+if (result["user"]["role"]?.toString().toLowerCase() == "parent") {
+  Session.studentId = result["user"]["parent_student_id"];
+} else {
+  Session.studentId = result["user"]["student_id"];
+}
 Session.studentClass =
     result["user"]["class"]?.toString();
 

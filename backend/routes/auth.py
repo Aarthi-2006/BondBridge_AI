@@ -31,7 +31,9 @@ def login():
             s.roll_no,
             s.gender,
             s.class,
-            s.section
+            s.section,
+            p.parent_id,
+            p.student_id AS parent_student_id
 
         FROM users u
 
@@ -40,6 +42,8 @@ def login():
 
         LEFT JOIN students s
             ON u.user_id = s.user_id
+        LEFT JOIN parents p
+            ON u.user_id = p.user_id
 
         WHERE u.email=%s
         AND u.password=%s

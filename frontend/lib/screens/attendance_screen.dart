@@ -69,9 +69,10 @@ void initState() {
     loadTeacherClasses();
   }
 
-  if (Session.role == "Student") {
-    loadStudentAttendance();
-  }
+  if (Session.role == "Student" ||
+    Session.role?.toLowerCase() == "parent") {
+  loadStudentAttendance();
+}
 }
 Future<void> loadTeacherClasses() async {
   await ClassPermissionService.loadPermissions();
@@ -277,9 +278,10 @@ Future loadAttendance() async {
 
 
 
-     body: Padding(
+    body: Padding(
   padding: const EdgeInsets.all(16),
-  child: Session.role == "Student"
+  child: (Session.role == "Student" ||
+          Session.role?.toLowerCase() == "parent")
       ? viewAttendance()
       : selectedPage == ""
           ? attendanceMenu()
@@ -863,7 +865,8 @@ child:const Text(
 // VIEW ATTENDANCE PAGE
 
 Widget viewAttendance() {
-  if (Session.role == "Student") {
+  if (Session.role == "Student" ||
+      Session.role?.toLowerCase() == "parent") {
     return studentViewAttendance();
   }
 
@@ -1126,6 +1129,7 @@ Widget studentViewAttendance() {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (Session.role?.toLowerCase() != "parent") ...[
 
         const Text(
           "My Attendance",
@@ -1147,7 +1151,7 @@ Widget studentViewAttendance() {
         ),
 
         const SizedBox(height: 25),
-
+        ],
 // SELECT DATE
 InkWell(
   onTap: () async {

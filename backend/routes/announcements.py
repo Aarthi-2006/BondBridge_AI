@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+import traceback
 from database import get_connection
 
 announcements = Blueprint("announcements", __name__)
@@ -168,37 +169,49 @@ def get_announcements():
                 SELECT DISTINCT
                     a.*
                 FROM announcements a
+                INNER JOIN parents p
+                    ON p.parent_id=%s
                 INNER JOIN students s
-                    ON s.parent_id=%s
+                    ON s.student_id=p.student_id
                 WHERE
                     a.created_by='Admin'
                     OR
                     (
-                        (
-                            a.target_class=s.class
-                            AND a.target_section=s.section
-                        )
-                        OR
-                        (
-                            a.target_class='ALL_ASSIGNED'
-                            AND EXISTS (
-                                SELECT 1
-                                FROM class_teacher_assignment cta
-                                WHERE cta.teacher_id=a.teacher_id
-                                AND cta.class=s.class
-                                AND cta.section=s.section
-                            )
+                        a.target_class=s.class
+                        AND a.target_section=s.section
+                    )
+                    OR
+                    (
+                        a.target_class='ALL_ASSIGNED'
+                        AND EXISTS (
+                            SELECT 1
+                            FROM class_teacher_assignment cta
+                            WHERE cta.teacher_id=a.teacher_id
+                            AND cta.class=s.class
+                            AND cta.section=s.section
                         )
                     )
                 ORDER BY a.created_at DESC
             """, (user_id,))
+                
+
+        # -------------------------------------------------
+        # INVALID ROLE
+        # -------------------------------------------------
 
         else:
+
+            cursor.close()
+            conn.close()
 
             return jsonify({
                 "success": False,
                 "message": "Invalid role"
             }), 400
+
+        # -------------------------------------------------
+        # FETCH RESULTS
+        # -------------------------------------------------
 
         data = cursor.fetchall()
 
@@ -213,12 +226,20 @@ def get_announcements():
 
     except Exception as e:
 
+        print("========== ANNOUNCEMENT ERROR ==========")
+        print(str(e))
+        traceback.print_exc()
+        print("========================================")
+
         return jsonify({
             "success": False,
             "message": str(e)
         }), 500
 
 
+# =====================================================
+# GET SINGLE ANNOUNCEMENT
+# =====================================================
 # =====================================================
 # GET SINGLE ANNOUNCEMENT
 # =====================================================
@@ -735,7 +756,12 @@ def delete_announcement(announcement_id):
 
     except Exception as e:
 
-        return jsonify({
-            "success": False,
-            "message": str(e)
-        }), 500
+            print("========== ANNOUNCEMENT ERROR ==========")
+            print(str(e))
+            traceback.print_exc()
+            print("========================================")
+
+            return jsonify({
+                "success": False,
+                "message": str(e)
+            }), 500

@@ -79,10 +79,10 @@ void initState() {
 
   availableClasses = ClassPermissionService.getAvailableClasses();
 
-  if (Session.role?.toLowerCase()
-   == "student") {
-    currentPage = "View Homework";
-  }
+  if (Session.role?.toLowerCase() == "student" ||
+    Session.role?.toLowerCase() == "parent") {
+  currentPage = "View Homework";
+}
 
   loadHomework();
 }
@@ -174,6 +174,28 @@ Future<void> loadHomework() async {
 
       );
     }
+    // ==========================================
+// PARENT
+// ==========================================
+
+// ==========================================
+// PARENT
+// ==========================================
+
+else if (Session.role?.toLowerCase() == "parent") {
+
+  if (Session.studentId == null) {
+    setState(() {
+      isLoading = false;
+      homeworkList = [];
+    });
+    return;
+  }
+
+  data = await ApiService.getHomework(
+    studentId: Session.studentId,
+  );
+}
 
     // ==========================================
     // TEACHER

@@ -41,6 +41,8 @@ def get_marks():
 
     student_id = request.args.get("student_id")
     teacher_id = request.args.get("teacher_id")
+    parent_id = request.args.get("parent_id")
+    parent_id = request.args.get("parent_id")
     student_class = request.args.get("class")
     section = request.args.get("section")
     month = request.args.get("month")
@@ -111,6 +113,20 @@ def get_marks():
             )
         """)
         values.append(teacher_id)
+        # ==========================================
+    # PARENT → CHILD FILTER
+    # ==========================================
+
+    if parent_id:
+        conditions.append("""
+            EXISTS (
+                SELECT 1
+                FROM parents p
+                WHERE p.parent_id = %s
+                  AND p.student_id = s.student_id
+            )
+        """)
+        values.append(parent_id)
     # ==========================================
     # CLASS FILTER
     # ==========================================

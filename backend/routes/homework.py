@@ -96,8 +96,15 @@ def add_homework():
 # GET SUBMISSIONS
 # =====================================
 
+# =====================================
+# GET HOMEWORK
+# =====================================
+
 @homework.route("/homework", methods=["GET"])
 def get_homework():
+
+    conn = None
+    cursor = None
 
     try:
 
@@ -111,7 +118,7 @@ def get_homework():
         subject = request.args.get("subject")
 
         # =====================================
-        # STUDENT HOMEWORK
+        # STUDENT / PARENT HOMEWORK
         # =====================================
 
         if student_id:
@@ -130,71 +137,51 @@ def get_homework():
 
             if not student:
 
-                cursor.close()
-                conn.close()
-
                 return jsonify({
                     "success": False,
                     "message": "Student not found"
                 }), 404
 
-            # Only return homework for student's class + section
-            query = """
-            SELECT *
-            FROM homework
-            WHERE class=%s
-            AND section=%s
-            """
-
-            params = [
-                student["class"],
-                student["section"]
-            ]
-
-            if subject:
-                query += " AND subject=%s"
-                params.append(subject)
-
-            query += " ORDER BY created_at DESC"
+            class_name = student["class"]
+            section = student["section"]
 
         # =====================================
-        # TEACHER HOMEWORK
+        # HOMEWORK FILTER
         # =====================================
 
-        else:
+        query = """
+        SELECT *
+        FROM homework
+        WHERE 1=1
+        """
 
-            query = """
-            SELECT *
-            FROM homework
-            WHERE 1=1
-            """
+        params = []
 
-            params = []
+        # Class filter
+        if class_name:
+            query += " AND class=%s"
+            params.append(class_name)
 
-            if teacher_id:
-                query += " AND teacher_id=%s"
-                params.append(teacher_id)
+        # Section filter
+        if section:
+            query += " AND section=%s"
+            params.append(section)
 
-            if class_name:
-                query += " AND class=%s"
-                params.append(class_name)
+        # Teacher filter
+        if teacher_id:
+            query += " AND teacher_id=%s"
+            params.append(teacher_id)
 
-            if section:
-                query += " AND section=%s"
-                params.append(section)
+        # Subject filter
+        if subject:
+            query += " AND subject=%s"
+            params.append(subject)
 
-            if subject:
-                query += " AND subject=%s"
-                params.append(subject)
-
-            query += " ORDER BY created_at DESC"
+        query += " ORDER BY created_at DESC"
 
         cursor.execute(query, params)
 
         homework_list = cursor.fetchall()
-
-        cursor.close()
-        conn.close()
 
         return jsonify({
             "success": True,
@@ -207,3 +194,11 @@ def get_homework():
             "success": False,
             "message": str(e)
         }), 500
+
+    finally:
+
+        if cursor:
+            cursor.close()
+
+        if conn:
+            conn.close()

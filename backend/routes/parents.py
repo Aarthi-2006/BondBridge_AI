@@ -424,3 +424,104 @@ def delete_parent(parent_id):
         return jsonify({
             "error":str(e)
         }),500
+@parents.route("/parent_children/<int:parent_id>", methods=["GET"])
+def get_parent_children(parent_id):
+
+    try:
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT
+                s.student_id,
+                u.full_name AS full_name,
+                s.class,
+                s.section,
+                s.roll_no
+            FROM parents p
+            INNER JOIN students s
+                ON p.student_id = s.student_id
+            INNER JOIN users u
+                ON s.user_id = u.user_id
+            WHERE p.parent_id = %s
+        """, (parent_id,))
+
+        children = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "children": children
+        }), 200
+
+    except Exception as e:
+
+        return jsonify({
+            "success": False,
+            "children": [],
+            "message": str(e)
+        }), 500
+# ==================================================
+# GET PARENT PROFILE
+# ==================================================
+
+@parents.route("/parent_profile/<int:parent_id>", methods=["GET"])
+def get_parent_profile(parent_id):
+
+    try:
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT
+                p.parent_id,
+                u.full_name,
+                u.email,
+                p.relationship,
+
+                s.student_id,
+                su.full_name AS child_name,
+                s.class,
+                s.section,
+                s.roll_no
+
+            FROM parents p
+
+            INNER JOIN users u
+                ON p.user_id = u.user_id
+
+            INNER JOIN students s
+                ON p.student_id = s.student_id
+
+            INNER JOIN users su
+                ON s.user_id = su.user_id
+
+            WHERE p.parent_id = %s
+        """, (parent_id,))
+
+        parent = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if not parent:
+            return jsonify({
+                "success": False,
+                "message": "Parent profile not found"
+            }), 404
+
+        return jsonify({
+            "success": True,
+            "parent": parent
+        }), 200
+
+    except Exception as e:
+
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500

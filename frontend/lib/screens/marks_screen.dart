@@ -16,18 +16,41 @@ class MarksScreen extends StatefulWidget {
 }
 
 class _MarksScreenState extends State<MarksScreen> {
+  // ==========================================
+// PARENT CHILDREN
+// ==========================================
+
+List<dynamic> parentChildren = [];
+
+int? selectedParentChildId;
   // ===========================================================
   // CLASS / SECTION / STUDENT DATA
   // ===========================================================
 
   String? selectedClass;
-  String? selectedSection;
-  int? selectedStudentId;
+String? selectedSection;
+int? selectedStudentId;
 
-  List<dynamic> students = [];
+List<dynamic> students = [];
 
-  bool isLoadingStudents = false;
-  int? actualStudentId;
+bool isLoadingStudents = false;
+
+// ===========================================================
+// LOGGED-IN STUDENT ID
+// ===========================================================
+
+int? actualStudentId;
+
+// ===========================================================
+// PARENT CHILD DATA
+// ===========================================================
+
+int? parentChildStudentId;
+String? parentChildName;
+String? parentChildClass;
+String? parentChildSection;
+
+bool isLoadingParentChild = false;
   // ===========================================================
 // TEACHER ASSIGNED CLASSES
 // ===========================================================
@@ -138,12 +161,17 @@ final List<String> levels = [
 
   final Map<String, TextEditingController> markControllers = {};
 
-  @override
+ @override
 void initState() {
   super.initState();
 
   _loadAssignedClasses();
-  _loadActualStudentId();
+
+  if (Session.role == "Parent") {
+    _loadParentChildren();
+  } else if (Session.role == "Student") {
+    _loadActualStudentId();
+  }
 }
 void _initializeMarkControllers() {
   for (final subject in subjects) {
@@ -185,7 +213,186 @@ Future<void> _loadActualStudentId() async {
 
     super.dispose();
   }
+  // ==========================================
+// LOAD PARENT'S CHILDREN
+// ==========================================
 
+Future<void> _loadParentChildren() async {
+  if (Session.parentId == null) {
+    debugPrint("Parent ID is null.");
+    return;
+  }
+
+  if (!mounted) return;
+
+  setState(() {
+    isLoadingParentChild = true;
+    selectedParentChildId = null;
+    parentChildStudentId = null;
+    parentChildName = null;
+    parentChildClass = null;
+    parentChildSection = null;
+  });
+
+  try {
+    final children = await ApiService.getParentChildren(
+      parentId: Session.parentId!,
+    );
+
+    if (!mounted) return;
+
+    debugPrint("Parent children: $children");
+
+    if (children.isEmpty) {
+      setState(() {
+        parentChildren = [];
+        selectedParentChildId = null;
+        parentChildStudentId = null;
+        parentChildName = null;
+        parentChildClass = null;
+        parentChildSection = null;
+        isLoadingParentChild = false;
+      });
+
+      return;
+    }
+
+    // =====================================================
+    // SELECT FIRST CHILD BY DEFAULT
+    // =====================================================
+
+    final child = children.first;
+
+    final childId = int.tryParse(
+      child["student_id"]?.toString() ??
+          child["id"]?.toString() ??
+          "",
+    );
+
+    final childName =
+        child["full_name"]?.toString() ??
+        child["student_name"]?.toString() ??
+        child["name"]?.toString() ??
+        "Child";
+
+    final childClass =
+        child["class"]?.toString() ??
+        child["class_name"]?.toString() ??
+        "";
+
+    final childSection =
+        child["section"]?.toString() ??
+        "";
+
+    debugPrint(
+      "Selected child ID: $childId",
+    );
+
+    debugPrint(
+      "Selected child name: $childName",
+    );
+
+    debugPrint(
+      "Selected child class: $childClass",
+    );
+
+    debugPrint(
+      "Selected child section: $childSection",
+    );
+
+    if (childId == null) {
+      setState(() {
+        parentChildren = children;
+        isLoadingParentChild = false;
+      });
+
+      _showMessage(
+        "Unable to identify your child.",
+      );
+
+      return;
+    }
+
+    if (childClass.isEmpty) {
+      setState(() {
+        parentChildren = children;
+        isLoadingParentChild = false;
+      });
+
+      _showMessage(
+        "Child class not found.",
+      );
+
+      return;
+    }
+
+    if (childSection.isEmpty) {
+      setState(() {
+        parentChildren = children;
+        isLoadingParentChild = false;
+      });
+
+      _showMessage(
+        "Child section not found.",
+      );
+
+      return;
+    }
+
+    // =====================================================
+    // STORE SELECTED CHILD DETAILS
+    // =====================================================
+
+    setState(() {
+      parentChildren = children;
+
+      selectedParentChildId = childId;
+      parentChildStudentId = childId;
+
+      parentChildName = childName;
+      parentChildClass = childClass;
+      parentChildSection = childSection;
+
+      isLoadingParentChild = false;
+    });
+
+    debugPrint(
+      "Parent child details stored successfully.",
+    );
+
+    debugPrint(
+      "Student ID: $selectedParentChildId",
+    );
+
+    debugPrint(
+      "Class: $parentChildClass",
+    );
+
+    debugPrint(
+      "Section: $parentChildSection",
+    );
+  } catch (e) {
+    debugPrint(
+      "Error loading parent children: $e",
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      parentChildren = [];
+      selectedParentChildId = null;
+      parentChildStudentId = null;
+      parentChildName = null;
+      parentChildClass = null;
+      parentChildSection = null;
+      isLoadingParentChild = false;
+    });
+
+    _showMessage(
+      "Unable to load your child's details.",
+    );
+  }
+}
   // ===========================================================
   // BUILD
   // ===========================================================
@@ -209,9 +416,12 @@ Future<void> _loadActualStudentId() async {
     return _buildStudentViewMarksPage(context);
   }
 
+  if (Session.role?.toLowerCase() == "parent") {
+    return _buildParentViewMarksPage(context);
+  }
+
   return _buildViewMarksPage(context);
 }
-
     // =========================================================
     // MANAGEMENT
     // =========================================================
@@ -833,7 +1043,9 @@ if (Session.role?.toLowerCase() == "student") {
 
     try {
       final result = await ApiService.getMarks(
-studentId: actualStudentId,
+studentId: Session.role == "Parent"
+    ? parentChildStudentId
+    : actualStudentId,
         assessmentType:
             selectedViewCategory == "Academic"
                 ? selectedAssessment
@@ -955,6 +1167,173 @@ studentId: actualStudentId,
 
     _showMessage(
       "Unable to load marks.",
+    );
+  }
+}
+// ===========================================================
+// LOAD PARENT CHILD MARKS
+// ===========================================================
+
+Future<void> _loadParentViewMarks() async {
+  if (parentChildStudentId == null) {
+  await _loadParentChildren();
+}
+  // ---------------------------------------------------------
+  // CHECK CHILD
+  // ---------------------------------------------------------
+
+  if (selectedParentChildId == null) {
+    _showMessage(
+      "Child details not found.",
+    );
+    return;
+  }
+
+  // ---------------------------------------------------------
+  // CHECK CHILD CLASS
+  // ---------------------------------------------------------
+
+  if (parentChildClass == null ||
+      parentChildClass!.isEmpty) {
+    _showMessage(
+      "Child class not found.",
+    );
+    return;
+  }
+
+  // ---------------------------------------------------------
+  // CHECK CHILD SECTION
+  // ---------------------------------------------------------
+
+  if (parentChildSection == null ||
+      parentChildSection!.isEmpty) {
+    _showMessage(
+      "Child section not found.",
+    );
+    return;
+  }
+
+  // ---------------------------------------------------------
+  // MONTHLY TEST VALIDATION
+  // ---------------------------------------------------------
+
+  if (selectedViewCategory == "Academic" &&
+      selectedAssessment == "Monthly Test" &&
+      selectedMonth == null) {
+    _showMessage(
+      "Please select the month for Monthly Test.",
+    );
+    return;
+  }
+
+  // ---------------------------------------------------------
+  // SHOW LOADING
+  // ---------------------------------------------------------
+
+  setState(() {
+    isLoadingMarks = true;
+    marksLoaded = false;
+    viewMarks = [];
+  });
+
+  try {
+    debugPrint(
+      "Loading parent child marks...",
+    );
+
+    debugPrint(
+      "Student ID: $selectedParentChildId",
+    );
+
+    debugPrint(
+      "Class: $parentChildClass",
+    );
+
+    debugPrint(
+      "Section: $parentChildSection",
+    );
+
+    debugPrint(
+      "Category: $selectedViewCategory",
+    );
+
+    debugPrint(
+      "Assessment: $selectedAssessment",
+    );
+
+    debugPrint(
+      "Month: $selectedMonth",
+    );
+
+    // -------------------------------------------------------
+    // LOAD ONLY THIS CHILD'S MARKS
+    // -------------------------------------------------------
+
+    final result = await ApiService.getMarks(
+      studentId: selectedParentChildId,
+
+      studentClass: parentChildClass!,
+      section: parentChildSection!,
+
+      assessmentType:
+          selectedViewCategory == "Academic"
+              ? selectedAssessment
+              : null,
+
+      assessmentCategory:
+          selectedViewCategory,
+
+      month:
+          selectedViewCategory == "Academic" &&
+                  selectedAssessment == "Monthly Test"
+              ? selectedMonth
+              : null,
+
+      // Parent should NOT use teacher filtering.
+      teacherId: null,
+parentId: Session.parentId,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      viewMarks = result;
+      isLoadingMarks = false;
+      marksLoaded = true;
+    });
+
+    debugPrint(
+      "Parent child marks loaded: ${viewMarks.length}",
+    );
+
+    // -------------------------------------------------------
+    // RESULT MESSAGE
+    // -------------------------------------------------------
+
+    if (viewMarks.isEmpty) {
+      _showMessage(
+        "No marks found for ${parentChildName ?? "your child"}.",
+      );
+    } else {
+      _showMessage(
+        "${viewMarks.length} mark record(s) loaded.",
+      );
+    }
+  } catch (e) {
+    debugPrint(
+      "Error loading parent child marks: $e",
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      isLoadingMarks = false;
+      marksLoaded = true;
+      viewMarks = [];
+    });
+
+    _showMessage(
+      "Unable to load your child's marks.",
     );
   }
 }
@@ -1691,19 +2070,17 @@ Widget _buildStudentViewMarksPage(BuildContext context) {
   hint: "Select Category",
   value: selectedViewCategory,
   items: assessmentCategories,
-  onChanged: (value) {
-    setState(() {
-      selectedViewCategory = value!;
+ onChanged: (value) {
+  setState(() {
+    selectedViewCategory = value!;
 
-      viewMarks = [];
-      marksLoaded = false;
+    viewMarks = [];
+    marksLoaded = false;
 
-      if (selectedViewCategory == "Extracurricular") {
-        selectedAssessment = "Monthly Test";
-        selectedMonth = null;
-      }
-    });
-  },
+    selectedAssessment = "Monthly Test";
+    selectedMonth = null;
+  });
+},
 ),
 
             // =================================================
@@ -1876,6 +2253,388 @@ Widget _buildStudentViewMarksPage(BuildContext context) {
     ),
   );
 }
+
+Widget _buildParentViewMarksPage(BuildContext context) {
+  if (isLoadingParentChild) {
+    return Scaffold(
+      backgroundColor: const Color(0xffF5F7FB),
+      appBar: AppBar(
+        backgroundColor: MarksScreen.primaryBlue,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: const Text(
+          "Child's Marks",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      body: const Center(
+        child: CircularProgressIndicator(
+          color: MarksScreen.primaryBlue,
+        ),
+      ),
+    );
+  }
+
+  String childName = "Child";
+
+  if (selectedParentChildId != null &&
+      parentChildren.isNotEmpty) {
+    final child = parentChildren.firstWhere(
+      (item) =>
+          int.tryParse(
+            item["student_id"].toString(),
+          ) ==
+          selectedParentChildId,
+      orElse: () => null,
+    );
+
+    if (child != null) {
+      childName =
+          child["full_name"]?.toString() ??
+          child["student_name"]?.toString() ??
+          child["name"]?.toString() ??
+          "Child";
+    }
+  }
+
+  return Scaffold(
+    backgroundColor: const Color(0xffF5F7FB),
+
+    appBar: AppBar(
+      backgroundColor: MarksScreen.primaryBlue,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      centerTitle: true,
+
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () {
+          Navigator.pop(context);
+        },
+      ),
+
+      title: const Text(
+        "Child's Marks",
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ),
+
+    body: SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            const Text(
+              "Child's Marks",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              "View marks and performance of $childName.",
+              style: const TextStyle(
+                fontSize: 15,
+                color: Colors.grey,
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // =================================================
+            // CHILD NAME
+            // =================================================
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(15),
+
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: Colors.grey.shade200,
+                ),
+              ),
+
+              child: Row(
+                children: [
+                  Container(
+                    width: 45,
+                    height: 45,
+
+                    decoration: BoxDecoration(
+                      color: MarksScreen.primaryBlue
+                          .withValues(alpha: 0.10),
+                      borderRadius:
+                          BorderRadius.circular(12),
+                    ),
+
+                    child: const Icon(
+                      Icons.person_outline,
+                      color: MarksScreen.primaryBlue,
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Student",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+
+                        const SizedBox(height: 3),
+
+                        Text(
+                          childName,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 25),
+
+            // =================================================
+            // ASSESSMENT CATEGORY
+            // =================================================
+
+            _buildDropdownField(
+              label: "Assessment Category",
+              hint: "Select Category",
+              value: selectedViewCategory,
+              items: assessmentCategories,
+              onChanged: (value) {
+                setState(() {
+                  selectedViewCategory = value!;
+
+                  viewMarks = [];
+                  marksLoaded = false;
+
+                  if (selectedViewCategory ==
+                      "Extracurricular") {
+                    selectedAssessment = "Monthly Test";
+                    selectedMonth = null;
+                  }
+                });
+              },
+            ),
+
+            // =================================================
+            // ACADEMIC ASSESSMENT
+            // =================================================
+
+            if (selectedViewCategory == "Academic") ...[
+              const SizedBox(height: 20),
+
+              const Text(
+                "Assessment Type",
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _buildViewAssessmentButton(
+                    "Monthly Test",
+                  ),
+                  _buildViewAssessmentButton(
+                    "Quarterly",
+                  ),
+                  _buildViewAssessmentButton(
+                    "Half Yearly",
+                  ),
+                  _buildViewAssessmentButton(
+                    "Annual",
+                  ),
+                ],
+              ),
+            ],
+
+            // =================================================
+            // MONTH
+            // =================================================
+
+            if (selectedViewCategory == "Academic" &&
+                selectedAssessment == "Monthly Test") ...[
+              const SizedBox(height: 15),
+
+              _buildDropdownField(
+                label: "Month",
+                hint: "Select Month",
+                value: selectedMonth,
+                items: months,
+                onChanged: (value) {
+                  setState(() {
+                    selectedMonth = value;
+                    viewMarks = [];
+                    marksLoaded = false;
+                  });
+                },
+              ),
+            ],
+
+            const SizedBox(height: 25),
+
+            // =================================================
+            // VIEW MARKS
+            // =================================================
+
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+
+              child: ElevatedButton.icon(
+                onPressed: isLoadingMarks
+                    ? null
+                    : _loadParentViewMarks,
+
+                icon: isLoadingMarks
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child:
+                            CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.visibility_outlined,
+                      ),
+
+                label: Text(
+                  isLoadingMarks
+                      ? "Loading Marks..."
+                      : "View Marks",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      MarksScreen.primaryBlue,
+                  foregroundColor: Colors.white,
+
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 25),
+
+            // =================================================
+            // MARKS RESULT
+            // =================================================
+
+            if (viewMarks.isNotEmpty)
+              _buildMarksResult(),
+
+            // =================================================
+            // NO DATA
+            // =================================================
+
+            if (marksLoaded && viewMarks.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(25),
+
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius:
+                      BorderRadius.circular(14),
+                  border: Border.all(
+                    color: Colors.grey.shade200,
+                  ),
+                ),
+
+                child: const Column(
+                  children: [
+                    Icon(
+                      Icons.assignment_outlined,
+                      size: 45,
+                      color: Colors.grey,
+                    ),
+
+                    SizedBox(height: 12),
+
+                    Text(
+                      "No marks found",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    SizedBox(height: 5),
+
+                    Text(
+                      "No marks have been recorded for this assessment.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            const SizedBox(height: 30),
+          ],
+        ),
+      ),
+    ),
+  );
+}
   // ===========================================================
 // VIEW MARKS PAGE
 // ===========================================================
@@ -1941,116 +2700,191 @@ Widget _buildViewMarksPage(BuildContext context) {
             // =================================================
 
             // =================================================
-// CLASS + SECTION
+// PARENT CHILD / TEACHER STUDENT SELECTION
 // =================================================
 
-Column(
-  children: [
-    _buildDropdownField(
-      label: "Class",
-      hint: isLoadingAssignedClasses
-          ? "Loading Classes..."
-          : "Select Class",
-      value: selectedClass,
-      items: assignedClasses
-          .map((item) => item["class"]!)
-          .toSet()
-          .toList(),
-      onChanged: (value) {
-        setState(() {
-          selectedClass = value;
-          selectedSection = null;
-          selectedStudentId = null;
-students = [];
-          viewMarks = [];
-          marksLoaded = false;
-        });
-      },
-    ),
-
-    const SizedBox(height: 15),
-
-    _buildDropdownField(
-      label: "Section",
-      hint: selectedClass == null
-          ? "Select Class First"
-          : "Select Section",
-      value: selectedSection,
-      items: assignedClasses
-          .where(
-            (item) => item["class"] == selectedClass,
-          )
-          .map((item) => item["section"]!)
-          .toSet()
-          .toList(),
-      onChanged: selectedClass == null
-    ? (_) {}
-    : (value) {
-        setState(() {
-          selectedSection = value;
-          selectedStudentId = null;
-          students = [];
-          viewMarks = [];
-          marksLoaded = false;
-        });
-      },
-    ),
-  ],
-),
-
-const SizedBox(height: 20),
-
-// =================================================
-// LOAD STUDENTS
-// =================================================
-
-SizedBox(
-  width: double.infinity,
-  height: 50,
-  child: ElevatedButton.icon(
-    onPressed: isLoadingStudents
-        ? null
-        : _loadStudents,
-
-    icon: isLoadingStudents
-        ? const SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: Colors.white,
-            ),
-          )
-        : const Icon(Icons.people_alt_outlined),
-
-    label: Text(
-      isLoadingStudents
-          ? "Loading Students..."
-          : "Load Students",
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
+if (Session.role?.toLowerCase() == "parent") ...[
+  Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(15),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(
+        color: Colors.grey.shade200,
       ),
     ),
+    child: isLoadingParentChild
+        ? const Row(
+            children: [
+              SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                ),
+              ),
 
-    style: ElevatedButton.styleFrom(
-      backgroundColor: MarksScreen.primaryBlue,
-      foregroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+              SizedBox(width: 12),
+
+              Text(
+                "Loading child details...",
+                style: TextStyle(
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          )
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Child",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
+              ),
+
+              const SizedBox(height: 4),
+
+              Text(
+                parentChildName ?? "Child",
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+
+              const SizedBox(height: 6),
+
+              Text(
+                "Class ${parentChildClass ?? "N/A"} - "
+                "Section ${parentChildSection ?? "N/A"}",
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+  ),
+
+  const SizedBox(height: 20),
+],
+
+// =================================================
+// TEACHER CLASS + SECTION + STUDENT
+// =================================================
+
+if (Session.role?.toLowerCase() != "parent") ...[
+  Column(
+    children: [
+      _buildDropdownField(
+        label: "Class",
+        hint: isLoadingAssignedClasses
+            ? "Loading Classes..."
+            : "Select Class",
+        value: selectedClass,
+        items: assignedClasses
+            .map((item) => item["class"]!)
+            .toSet()
+            .toList(),
+        onChanged: (value) {
+          setState(() {
+            selectedClass = value;
+            selectedSection = null;
+            selectedStudentId = null;
+            students = [];
+            viewMarks = [];
+            marksLoaded = false;
+          });
+        },
+      ),
+
+      const SizedBox(height: 15),
+
+      _buildDropdownField(
+        label: "Section",
+        hint: selectedClass == null
+            ? "Select Class First"
+            : "Select Section",
+        value: selectedSection,
+        items: assignedClasses
+            .where(
+              (item) => item["class"] == selectedClass,
+            )
+            .map((item) => item["section"]!)
+            .toSet()
+            .toList(),
+        onChanged: selectedClass == null
+            ? (_) {}
+            : (value) {
+                setState(() {
+                  selectedSection = value;
+                  selectedStudentId = null;
+                  students = [];
+                  viewMarks = [];
+                  marksLoaded = false;
+                });
+              },
+      ),
+    ],
+  ),
+
+  const SizedBox(height: 20),
+
+  SizedBox(
+    width: double.infinity,
+    height: 50,
+    child: ElevatedButton.icon(
+      onPressed: isLoadingStudents
+          ? null
+          : _loadStudents,
+
+      icon: isLoadingStudents
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : const Icon(
+              Icons.people_alt_outlined,
+            ),
+
+      label: Text(
+        isLoadingStudents
+            ? "Loading Students..."
+            : "Load Students",
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+
+      style: ElevatedButton.styleFrom(
+        backgroundColor:
+            MarksScreen.primaryBlue,
+        foregroundColor: Colors.white,
+
+        shape: RoundedRectangleBorder(
+          borderRadius:
+              BorderRadius.circular(12),
+        ),
       ),
     ),
   ),
-),
 
-const SizedBox(height: 20),
+  const SizedBox(height: 20),
 
-// =================================================
-// STUDENT
-// =================================================
+  _buildStudentDropdown(),
 
-_buildStudentDropdown(),
-            const SizedBox(height: 20),
+  const SizedBox(height: 20),
+],
 
             // =================================================
             // LOAD MARKS BUTTON
@@ -2409,15 +3243,22 @@ Widget _buildMarksResult() {
 
                 const SizedBox(height: 5),
 
-                Text(
-                  "Class $selectedClass - Section $selectedSection",
-
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                ),
-
+                if (Session.role?.toLowerCase() == "parent")
+  Text(
+    "Class ${parentChildClass ?? "N/A"} - Section ${parentChildSection ?? "N/A"}",
+    style: const TextStyle(
+      fontSize: 14,
+      color: Colors.grey,
+    ),
+  )
+else
+  Text(
+    "Class $selectedClass - Section $selectedSection",
+    style: const TextStyle(
+      fontSize: 14,
+      color: Colors.grey,
+    ),
+  ),
                 const SizedBox(height: 15),
 
                 // =============================================
