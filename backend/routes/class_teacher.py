@@ -135,3 +135,44 @@ def teacher_classes(teacher_id):
         "success": True,
         "classes": data
     })
+# -------------------------------
+# Get Class Teacher for Student
+# -------------------------------
+@class_teacher.route(
+    "/student_class_teacher/<class_name>/<section>",
+    methods=["GET"]
+)
+def student_class_teacher(class_name, section):
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT
+            t.teacher_id,
+            u.full_name
+        FROM class_teacher_assignment c
+        JOIN teachers t
+            ON c.teacher_id = t.teacher_id
+        JOIN users u
+            ON t.user_id = u.user_id
+        WHERE c.class = %s
+        AND c.section = %s
+        LIMIT 1
+    """, (class_name, section))
+
+    teacher = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    if teacher:
+        return jsonify({
+            "success": True,
+            "teacher": teacher
+        })
+
+    return jsonify({
+        "success": False,
+        "message": "Class teacher not assigned"
+    }), 404

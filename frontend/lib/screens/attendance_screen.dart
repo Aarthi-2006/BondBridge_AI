@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../services/session.dart';
 import '../../services/class_permission_service.dart';
+import 'dart:io';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -16,7 +17,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   String? selectedClass;
   String? selectedSection;
-
+    String? classTeacher;
+  int? classTeacherId;
   String selectedPage = "";
   DateTime selectedDate = DateTime.now();
 List<dynamic> students = [];
@@ -26,7 +28,13 @@ Map<int, String> attendanceStatus = {};
 List viewAttendanceList = [];
 int totalStudents = 0;
 List assignedClasses = [];
+List<dynamic> studentAttendance = [];
+List<dynamic> displayedAttendance = [];
+bool isLoadingAttendance = false;
+bool showAll = false;
 
+
+DateTime? selectedStudentDate;
   final List<String> classes = [
 
     "1",
@@ -59,6 +67,10 @@ void initState() {
 
   if (Session.role == "Teacher") {
     loadTeacherClasses();
+  }
+
+  if (Session.role == "Student") {
+    loadStudentAttendance();
   }
 }
 Future<void> loadTeacherClasses() async {
@@ -170,6 +182,32 @@ content:Text(
 
 
 }
+Future<void> loadStudentAttendance() async {
+  if (Session.studentId == null) return;
+
+  setState(() {
+    isLoadingAttendance = true;
+  });
+
+  try {
+      final result = await ApiService.viewStudentAttendance(
+  studentId: Session.studentId!,
+);
+    
+
+    setState(() {
+      studentAttendance = result["attendance"] ?? [];
+displayedAttendance = List.from(studentAttendance);
+      isLoadingAttendance = false;
+    });
+  } catch (e) {
+    setState(() {
+      isLoadingAttendance = false;
+    });
+
+    debugPrint("Attendance error: $e");
+  }
+}
 Future loadAttendance() async {
 
   if (selectedClass == null || selectedSection == null) {
@@ -239,26 +277,16 @@ Future loadAttendance() async {
 
 
 
-      body: Padding(
-
-        padding: const EdgeInsets.all(16),
-
-
-        child:
-
-        selectedPage == ""
-
-            ? attendanceMenu()
-
-            : selectedPage == "take"
-
-            ? takeAttendance()
-
-            : viewAttendance(),
-
-
-      ),
-
+     body: Padding(
+  padding: const EdgeInsets.all(16),
+  child: Session.role == "Student"
+      ? viewAttendance()
+      : selectedPage == ""
+          ? attendanceMenu()
+          : selectedPage == "take"
+              ? takeAttendance()
+              : viewAttendance(),
+),
 
     );
 
@@ -832,8 +860,17 @@ child:const Text(
 
 // VIEW ATTENDANCE PAGE
 
-Widget viewAttendance() {
+// VIEW ATTENDANCE PAGE
 
+Widget viewAttendance() {
+  if (Session.role == "Student") {
+    return studentViewAttendance();
+  }
+
+  return teacherViewAttendance();
+}
+
+Widget teacherViewAttendance() {
   return SingleChildScrollView(
 
     child: Column(
@@ -1081,8 +1118,233 @@ else if (viewAttendanceList.isNotEmpty)
     ),
 
   );
+  
 
 }
+Widget studentViewAttendance() {
+  return SingleChildScrollView(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
 
+        const Text(
+          "My Attendance",
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+            color: Color(0xff1F4FB8),
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        const Text(
+          "View your attendance records.",
+          style: TextStyle(
+            color: Colors.grey,
+            fontSize: 15,
+          ),
+        ),
+
+        const SizedBox(height: 25),
+
+// SELECT DATE
+InkWell(
+  onTap: () async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+initialDate: selectedStudentDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+
+    if (pickedDate != null) {
+      setState(() {
+        selectedStudentDate = pickedDate;
+      });
+    }
+  },
+  child: InputDecorator(
+    decoration: const InputDecoration(
+      labelText: "Select Date",
+      border: OutlineInputBorder(),
+      prefixIcon: Icon(Icons.calendar_today),
+    ),
+    child: Text(
+  selectedStudentDate == null
+      ? "Select Date"
+      : "${selectedStudentDate!.day.toString().padLeft(2, '0')}-"
+        "${selectedStudentDate!.month.toString().padLeft(2, '0')}-"
+        "${selectedStudentDate!.year}",
+),
+  ),
+),
+
+const SizedBox(height: 15),
+
+// SEARCH + SHOW ALL
+Row(
+  children: [
+    Expanded(
+      child: ElevatedButton.icon(
+        onPressed: () {
+  if (selectedStudentDate == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Please select a date"),
+      ),
+    );
+    return;
+  }
+
+  final selectedDateString =
+      "${selectedStudentDate!.day.toString().padLeft(2, '0')}-"
+      "${selectedStudentDate!.month.toString().padLeft(2, '0')}-"
+      "${selectedStudentDate!.year}";
+
+  setState(() {
+    displayedAttendance = studentAttendance.where((attendance) {
+      final rawDate =
+          attendance["attendance_date"]?.toString() ?? "";
+
+      if (rawDate.isEmpty) {
+        return false;
+      }
+
+      try {
+        final parsedDate = HttpDate.parse(rawDate);
+
+        final attendanceDateString =
+            "${parsedDate.day.toString().padLeft(2, '0')}-"
+            "${parsedDate.month.toString().padLeft(2, '0')}-"
+            "${parsedDate.year}";
+
+        return attendanceDateString == selectedDateString;
+      } catch (e) {
+        return false;
+      }
+    }).toList();
+  });
+},
+        icon: const Icon(Icons.search),
+        label: const Text("Search"),
+      ),
+    ),
+
+    const SizedBox(width: 10),
+
+    Expanded(
+      child: OutlinedButton.icon(
+        onPressed: () {
+  setState(() {
+    selectedStudentDate = null;
+    displayedAttendance = List.from(studentAttendance);
+  });
+},
+        icon: const Icon(Icons.list),
+        label: const Text("Show All"),
+      ),
+    ),
+  ],
+),
+
+const SizedBox(height: 20),
+
+// TOTAL RECORDS
+
+
+if (isLoadingAttendance)
+  const Center(
+    child: CircularProgressIndicator(),
+  )
+else if (displayedAttendance.isEmpty)
+  const Center(
+    child: Padding(
+      padding: EdgeInsets.all(20),
+      child: Text(
+        "No attendance records found.",
+        style: TextStyle(
+          color: Colors.grey,
+          fontSize: 16,
+        ),
+      ),
+    ),
+  )
+else
+  Column(
+    children: [
+      Card(
+        child: ListTile(
+          leading: const Icon(
+            Icons.calendar_month,
+            color: Color(0xff1F4FB8),
+          ),
+          title: const Text(
+            "Total Attendance Records",
+          ),
+          trailing: Text(
+            displayedAttendance.length.toString(),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
+        ),
+      ),
+
+      const SizedBox(height: 10),
+
+      ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: displayedAttendance.length,
+        itemBuilder: (context, index) {
+          final attendance = displayedAttendance[index];
+
+          final status =
+              attendance["status"]?.toString() ?? "Not Marked";
+
+          final rawDate =
+              attendance["attendance_date"]?.toString() ?? "";
+
+          String date = rawDate;
+
+          if (rawDate.isNotEmpty && rawDate.contains("-")) {
+            final parts = rawDate.split("-");
+
+            if (parts.length == 3) {
+              date = "${parts[2]}-${parts[1]}-${parts[0]}";
+            }
+          }
+
+          return Card(
+            child: ListTile(
+              leading: Icon(
+                status == "Present"
+                    ? Icons.check_circle
+                    : Icons.cancel,
+                color: status == "Present"
+                    ? Colors.green
+                    : Colors.red,
+              ),
+              title: Text(
+                status,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              subtitle: Text(
+                "Date: $date",
+              ),
+            ),
+          );
+        },
+      ),
+    ],
+  ),
+      ],
+    ),
+  );
+}
 
 }

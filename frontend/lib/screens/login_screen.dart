@@ -46,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
         emailController.text.trim(),
         passwordController.text.trim(),
       );
-
+     debugPrint("LOGIN RESPONSE: $result");
       if (!mounted) return;
 
       setState(() {
@@ -54,13 +54,32 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       if (result["message"] == "Login successful") {
-        Session.userId = result["user"]["user_id"];
+       Session.userId = result["user"]["user_id"];
 
 Session.teacherId = result["user"]["teacher_id"];
 
-Session.role = result["user"]["role"];
+Session.studentId = result["user"]["student_id"];
 
-Session.fullName = result["user"]["full_name"];
+Session.studentClass =
+    result["user"]["class"]?.toString();
+
+Session.studentSection =
+    result["user"]["section"]?.toString();
+
+Session.rollNumber =
+    result["user"]["roll_no"]?.toString();
+
+Session.gender =
+    result["user"]["gender"]?.toString();
+
+Session.email =
+    result["user"]["email"]?.toString();
+
+Session.role =
+    result["user"]["role"];
+
+Session.fullName =
+    result["user"]["full_name"];
 
         String role = result["role"].toString().toLowerCase();
 
@@ -91,14 +110,22 @@ Session.fullName = result["user"]["full_name"];
 }
         else if (role == "student") {
 
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const StudentDashboard(),
-            ),
-          );
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => StudentDashboard(
+        studentName:
+            result["user"]?["full_name"]?.toString() ?? "Student",
 
-        } else if (role == "parent") {
+        studentEmail:
+            emailController.text.trim(),
+      ),
+    ),
+  );
+
+}
+
+        else if (role == "parent") {
 
           Navigator.pushReplacement(
             context,

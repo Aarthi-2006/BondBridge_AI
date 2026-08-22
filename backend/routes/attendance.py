@@ -122,3 +122,49 @@ def view_attendance():
             "success": False,
             "message": str(e)
         }), 500
+# =====================================
+# VIEW ATTENDANCE FOR ONE STUDENT
+# =====================================
+
+# =====================================
+# VIEW STUDENT OWN ATTENDANCE
+# =====================================
+
+@attendance.route("/attendance/student/<int:student_id>", methods=["GET"])
+def view_student_attendance(student_id):
+
+    try:
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+        SELECT
+            a.attendance_date,
+            a.status
+        FROM attendance a
+        WHERE a.student_id = %s
+        ORDER BY a.attendance_date DESC
+        """
+
+        cursor.execute(query, (student_id,))
+
+        attendance_list = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "total": len(attendance_list),
+            "attendance": attendance_list
+        })
+
+    except Exception as e:
+
+        return jsonify({
+            "success": False,
+            "attendance": [],
+            "total": 0,
+            "message": str(e)
+        }), 500

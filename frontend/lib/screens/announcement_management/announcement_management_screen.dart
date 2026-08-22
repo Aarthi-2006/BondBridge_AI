@@ -500,15 +500,15 @@ String formatAnnouncementDate(dynamic date) {
   ),
 ),
 
-      floatingActionButton: FloatingActionButton(
-
-        backgroundColor: Colors.blue,
-
-        onPressed: openAddAnnouncement,
-
-        child: const Icon(Icons.add),
-
-      ),
+      floatingActionButton:
+    Session.role?.toLowerCase() == "admin" ||
+    Session.role?.toLowerCase() == "teacher"
+        ? FloatingActionButton(
+            backgroundColor: Colors.blue,
+            onPressed: openAddAnnouncement,
+            child: const Icon(Icons.add),
+          )
+        : null,
 
       body: Column(
 

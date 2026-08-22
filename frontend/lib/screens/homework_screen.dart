@@ -19,7 +19,6 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
 String? selectedClass;
 String? selectedSection;
 String? selectedSubject;
-String selectedStatus = "Pending";
 String? filterClass;
 String? filterSection;
 String? filterSubject;
@@ -79,6 +78,11 @@ void initState() {
   super.initState();
 
   availableClasses = ClassPermissionService.getAvailableClasses();
+
+  if (Session.role?.toLowerCase()
+   == "student") {
+    currentPage = "View Homework";
+  }
 
   loadHomework();
 }
@@ -145,32 +149,65 @@ bool validateHomeworkForm() {
 
   return true;
 }
-Future loadHomework() async {
-  if (Session.teacherId == null) {
-    return;
-  }
-
+Future<void> loadHomework() async {
   setState(() {
     isLoading = true;
   });
 
   try {
-    final data = await ApiService.getHomework(
-      teacherId: Session.teacherId,
-      className: filterClass,
-      section: filterSection,
-      subject: filterSubject,
-    );
+    List<dynamic> data = [];
+
+    // ==========================================
+    // STUDENT
+    // ==========================================
+
+    if (Session.role?.toLowerCase()  == "student") {
+      if (Session.studentId == null) {
+        setState(() {
+          isLoading = false;
+        });
+        return;
+      }
+
+      data = await ApiService.getHomework(
+          studentId: Session.studentId,
+
+      );
+    }
+
+    // ==========================================
+    // TEACHER
+    // ==========================================
+
+    else if (Session.role ?.toLowerCase() == "teacher") {
+      if (Session.teacherId == null) {
+        setState(() {
+          isLoading = false;
+        });
+        return;
+      }
+
+      data = await ApiService.getHomework(
+        teacherId: Session.teacherId,
+        className: filterClass,
+        section: filterSection,
+        subject: filterSubject,
+      );
+    }
 
     setState(() {
       homeworkList = data;
       isLoading = false;
     });
+
   } catch (e) {
+
     setState(() {
       isLoading = false;
     });
-    if(!mounted) return;
+
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text("Failed to load homework: $e"),
@@ -207,34 +244,36 @@ Future loadHomework() async {
       ),
 const SizedBox(height: 20),
 
-Row(
-  children: [
-    Expanded(
-      child: ElevatedButton(
-        onPressed: () {
-          setState(() {
-            currentPage = "Assign Homework";
-          });
-        },
-        child: const Text("Assign Homework"),
+if (Session.role?.toLowerCase()  == "teacher")
+  Row(
+    children: [
+      Expanded(
+        child: ElevatedButton(
+          onPressed: () {
+            setState(() {
+              currentPage = "Assign Homework";
+            });
+          },
+          child: const Text("Assign Homework"),
+        ),
       ),
-    ),
-    const SizedBox(width: 10),
-    Expanded(
-      child: ElevatedButton(
-        onPressed: () {
-          setState(() {
-            currentPage = "View Homework";
-          });
-        },
-        child: const Text("View Homework"),
+      const SizedBox(width: 10),
+      Expanded(
+        child: ElevatedButton(
+          onPressed: () {
+            setState(() {
+              currentPage = "View Homework";
+            });
+          },
+          child: const Text("View Homework"),
+        ),
       ),
-    ),
-  ],
-),
+    ],
+  ),
 
 const SizedBox(height: 20),
-if (currentPage == "Assign Homework") ...[
+if (currentPage == "Assign Homework" &&
+    Session.role?.toLowerCase()  == "teacher") ...[
 DropdownButtonFormField<String>(
   initialValue: selectedClass,
   decoration: const InputDecoration(
@@ -347,31 +386,6 @@ TextFormField(
 ),
 const SizedBox(height: 16),
 
-DropdownButtonFormField<String>(
-  initialValue: selectedStatus,
-  decoration: const InputDecoration(
-    labelText: "Status",
-    border: OutlineInputBorder(),
-  ),
-  items: const [
-    DropdownMenuItem(
-      value: "Pending",
-      child: Text("Pending"),
-    ),
-    DropdownMenuItem(
-      value: "Completed",
-      child: Text("Completed"),
-    ),
-  ],
-  onChanged: (value) {
-    if (value != null) {
-      setState(() {
-        selectedStatus = value;
-      });
-    }
-  },
-),
-const SizedBox(height: 20),
 
 SizedBox(
   width: double.infinity,
@@ -396,7 +410,7 @@ SizedBox(
       "description": descriptionController.text.trim(),
       "assigned_date": assignedDate!.toIso8601String().split('T')[0],
       "due_date": dueDate!.toIso8601String().split('T')[0],
-      "status": selectedStatus,
+    
     };
 
     final response = await ApiService.addHomework(data);
@@ -418,7 +432,6 @@ setState(() {
   selectedClass = null;
 selectedSection = null;
 availableSections = [];
-  selectedStatus = "Pending";
     selectedSubject = null;
 
 });
@@ -448,6 +461,8 @@ availableSections = [];
 const SizedBox(height: 30),
 ],
 if (currentPage == "View Homework") ...[
+
+  if (Session.role?.toLowerCase()  == "teacher") ...[
 DropdownButtonFormField<String>(
   initialValue: filterClass,
   decoration: const InputDecoration(
@@ -560,7 +575,7 @@ Align(
   ),
 ),
 
-
+  ],
 // 👇 ASSIGNED HOMEWORK COMES AFTER CLEAR FILTERS
 
 
@@ -690,30 +705,6 @@ Row(
 ),
 
         const SizedBox(height: 8),
-
-        Container(
-  padding: const EdgeInsets.symmetric(
-    horizontal: 10,
-    vertical: 6,
-  ),
-  decoration: BoxDecoration(
-    color: homework["status"] == "Completed"
-        ? Colors.green.shade100
-        : Colors.orange.shade100,
-    borderRadius: BorderRadius.circular(20),
-  ),
-  child: Text(
-    "Status: ${homework["status"] ?? ""}",
-    style: TextStyle(
-      fontWeight: FontWeight.bold,
-      color: homework["status"] == "Completed"
-          ? Colors.green.shade800
-          : Colors.orange.shade800,
-    ),
-  ),
-),
-
-        const SizedBox(height: 10),
 
 Container(
   width: double.infinity,

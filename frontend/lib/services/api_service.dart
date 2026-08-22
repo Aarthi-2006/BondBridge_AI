@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'session.dart';
 
-
 class ApiService {
 
   // Emulator -> Flask
@@ -1150,46 +1149,133 @@ static Future<Map<String, dynamic>> viewAttendance({
   }
 
 }
+
+// ======================================
+// VIEW STUDENT ATTENDANCE
+// ======================================
+
+// ======================================
+// VIEW STUDENT OWN ATTENDANCE
+// ======================================
+
+static Future<Map<String, dynamic>> viewStudentAttendance({
+  required int studentId,
+}) async {
+
+  try {
+
+    final response = await http.get(
+      Uri.parse(
+        "$baseUrl/attendance/student/$studentId",
+      ),
+    );
+
+    if (response.statusCode == 200) {
+
+      return jsonDecode(response.body);
+
+    }
+
+    return {
+      "success": false,
+      "attendance": [],
+      "total": 0,
+      "message": "Failed to load attendance",
+    };
+
+  } catch (e) {
+
+    return {
+      "success": false,
+      "attendance": [],
+      "total": 0,
+      "message": e.toString(),
+    };
+
+  }
+}
 // ======================================
 // GET MARKS
 // ======================================
 
 static Future<List> getMarks({
-  required String studentClass,
-  required String section,
+  String? studentClass,
+  String? section,
   int? studentId,
   String? assessmentType,
-    String? assessmentCategory,
-
+  String? assessmentCategory,
   String? month,
   int? teacherId,
 }) async {
   try {
-    final params = <String, String>{
-      "class": studentClass,
-      "section": section,
-    };
+    final params = <String, String>{};
+
+    // =========================================================
+    // CLASS
+    // =========================================================
+
+    if (studentClass != null &&
+        studentClass.isNotEmpty) {
+      params["class"] = studentClass;
+    }
+
+    // =========================================================
+    // SECTION
+    // =========================================================
+
+    if (section != null &&
+        section.isNotEmpty) {
+      params["section"] = section;
+    }
+
+    // =========================================================
+    // STUDENT
+    // =========================================================
 
     if (studentId != null) {
       params["student_id"] = studentId.toString();
     }
 
+    // =========================================================
+    // ASSESSMENT TYPE
+    // =========================================================
+
     if (assessmentType != null &&
         assessmentType.isNotEmpty) {
       params["assessment_type"] = assessmentType;
     }
-    if (assessmentCategory != null &&
-    assessmentCategory.isNotEmpty) {
-  params["assessment_category"] = assessmentCategory;
-}
 
-    if (month != null && month.isNotEmpty) {
+    // =========================================================
+    // ASSESSMENT CATEGORY
+    // =========================================================
+
+    if (assessmentCategory != null &&
+        assessmentCategory.isNotEmpty) {
+      params["assessment_category"] =
+          assessmentCategory;
+    }
+
+    // =========================================================
+    // MONTH
+    // =========================================================
+
+    if (month != null &&
+        month.isNotEmpty) {
       params["month"] = month;
     }
 
+    // =========================================================
+    // TEACHER
+    // =========================================================
+
     if (teacherId != null) {
-      params["teacher_id"] = teacherId.toString();
+      params["teacher_id"] =
+          teacherId.toString();
     }
+
+    // =========================================================
+    // API REQUEST
+    // =========================================================
 
     final uri = Uri.parse("$baseUrl/marks").replace(
       queryParameters: params,
@@ -1301,16 +1387,32 @@ static Future<Map<String, dynamic>> addHomework(
 
 static Future<List<dynamic>> getHomework({
   int? teacherId,
+  int? studentId,
   String? className,
   String? section,
   String? subject,
 }) async {
   Map<String, String> params = {};
 
-  if (teacherId != null) params["teacher_id"] = teacherId.toString();
-  if (className != null) params["class"] = className;
-  if (section != null) params["section"] = section;
-  if (subject != null) params["subject"] = subject;
+  if (teacherId != null) {
+    params["teacher_id"] = teacherId.toString();
+  }
+
+  if (studentId != null) {
+    params["student_id"] = studentId.toString();
+  }
+
+  if (className != null) {
+    params["class"] = className;
+  }
+
+  if (section != null) {
+    params["section"] = section;
+  }
+
+  if (subject != null) {
+    params["subject"] = subject;
+  }
 
   final uri = Uri.parse("$baseUrl/homework")
       .replace(queryParameters: params);
@@ -1325,76 +1427,36 @@ static Future<List<dynamic>> getHomework({
 
   return [];
 }
-// ==========================================
-// SUBMIT HOMEWORK
-// ==========================================
+// ======================================
+// GET STUDENT CLASS TEACHER
+// ======================================
 
-static Future<Map<String, dynamic>> submitHomework({
-  required int homeworkId,
-  required int studentId,
+static Future<String?> getStudentClassTeacher({
+  required String studentClass,
+  required String section,
 }) async {
-
   try {
-
-    final response = await http.post(
-
-      Uri.parse(
-        "$baseUrl/homework/$homeworkId/submit",
-      ),
-
-      headers: {
-        "Content-Type": "application/json",
-      },
-
-      body: jsonEncode({
-
-        "student_id": studentId,
-
-      }),
-
-    );
-
-    return jsonDecode(response.body);
-
-  } catch (e) {
-
-    return {
-      "success": false,
-      "message": "Unable to connect to server",
-    };
-
-  }
-}
-
-
-// ==========================================
-// GET HOMEWORK SUBMISSIONS
-// ==========================================
-
-static Future<Map<String, dynamic>> getHomeworkSubmissions({
-  required int homeworkId,
-}) async {
-
-  try {
-
     final response = await http.get(
-
       Uri.parse(
-        "$baseUrl/homework/$homeworkId/submissions",
+        "$baseUrl/student_class_teacher/"
+        "${Uri.encodeComponent(studentClass)}/"
+        "${Uri.encodeComponent(section)}",
       ),
-
     );
 
-    return jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
 
+      if (data["success"] == true) {
+        return data["teacher"]?["full_name"]?.toString();
+      }
+
+      return null;
+    }
+
+    return null;
   } catch (e) {
-
-    return {
-      "success": false,
-      "message": "Unable to connect to server",
-      "submissions": [],
-    };
-
+    return null;
   }
 }
 }

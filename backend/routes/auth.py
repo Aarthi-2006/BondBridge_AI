@@ -20,14 +20,27 @@ def login():
 
         query = """
         SELECT
-        u.user_id,
-        u.full_name,
-        u.email,
-        u.role,
-        t.teacher_id
+            u.user_id,
+            u.full_name,
+            u.email,
+            u.role,
+
+            t.teacher_id,
+
+            s.student_id,
+            s.roll_no,
+            s.gender,
+            s.class,
+            s.section
+
         FROM users u
+
         LEFT JOIN teachers t
-        ON u.user_id = t.user_id
+            ON u.user_id = t.user_id
+
+        LEFT JOIN students s
+            ON u.user_id = s.user_id
+
         WHERE u.email=%s
         AND u.password=%s
         """

@@ -27,6 +27,7 @@ class _MarksScreenState extends State<MarksScreen> {
   List<dynamic> students = [];
 
   bool isLoadingStudents = false;
+  int? actualStudentId;
   // ===========================================================
 // TEACHER ASSIGNED CLASSES
 // ===========================================================
@@ -142,6 +143,7 @@ void initState() {
   super.initState();
 
   _loadAssignedClasses();
+  _loadActualStudentId();
 }
 void _initializeMarkControllers() {
   for (final subject in subjects) {
@@ -151,6 +153,30 @@ void _initializeMarkControllers() {
   }
 }
 
+Future<void> _loadActualStudentId() async {
+  try {
+    final result = await ApiService.getStudents();
+
+    if (result.isEmpty || Session.userId == null) {
+      return;
+    }
+
+    final student = result.firstWhere(
+      (item) => item["user_id"].toString() == Session.userId.toString(),
+      orElse: () => null,
+    );
+
+    if (student != null) {
+      setState(() {
+        actualStudentId =
+            int.tryParse(student["student_id"].toString());
+      });
+      debugPrint("Actual Student ID: $actualStudentId");
+    }
+  } catch (e) {
+    debugPrint("Error loading student ID: $e");
+  }
+}
   @override
   void dispose() {
     for (final controller in markControllers.values) {
@@ -179,8 +205,12 @@ void _initializeMarkControllers() {
     // =========================================================
 
     if (widget.initialPage == "View Marks") {
-      return _buildViewMarksPage(context);
-    }
+  if (Session.role?.toLowerCase() == "student") {
+    return _buildStudentViewMarksPage(context);
+  }
+
+  return _buildViewMarksPage(context);
+}
 
     // =========================================================
     // MANAGEMENT
@@ -774,6 +804,80 @@ Future<void> _loadAssignedClasses() async {
 // ===========================================================
 
 Future<void> _loadMarks() async {
+    // ===========================================================
+  // STUDENT VIEW MARKS
+  // ===========================================================
+
+if (Session.role?.toLowerCase() == "student") {
+      if (Session.userId == null) {
+      _showMessage(
+        "Student session not found. Please login again.",
+      );
+      return;
+    }
+
+    if (selectedViewCategory == "Academic" &&
+        selectedAssessment == "Monthly Test" &&
+        selectedMonth == null) {
+      _showMessage(
+        "Please select the month for Monthly Test.",
+      );
+      return;
+    }
+
+    setState(() {
+      isLoadingMarks = true;
+      marksLoaded = false;
+      viewMarks = [];
+    });
+
+    try {
+      final result = await ApiService.getMarks(
+studentId: actualStudentId,
+        assessmentType:
+            selectedViewCategory == "Academic"
+                ? selectedAssessment
+                : null,
+        assessmentCategory: selectedViewCategory,
+        month: selectedViewCategory == "Academic" &&
+                selectedAssessment == "Monthly Test"
+            ? selectedMonth
+            : null,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        viewMarks = result;
+        isLoadingMarks = false;
+        marksLoaded = true;
+      });
+
+      if (viewMarks.isEmpty) {
+        _showMessage(
+          "No marks found for this assessment.",
+        );
+      } else {
+        _showMessage(
+          "${viewMarks.length} mark record(s) loaded.",
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isLoadingMarks = false;
+        marksLoaded = true;
+        viewMarks = [];
+      });
+
+      _showMessage(
+        "Unable to load your marks.",
+      );
+    }
+
+    return;
+  }
   if (selectedStudentId == null) {
   _showMessage(
     "Please select a student.",
@@ -1088,7 +1192,9 @@ assessmentType: selectedAssessment,        // This represents that these are exa
         // Quarterly
         // Half Yearly
         // Annual
-        assessmentName: selectedAssessment,
+assessmentName: selectedAssessment == "Monthly Test"
+        ? "$selectedMonth Monthly Test"
+        : selectedAssessment,
 
         assessmentDate:
             DateTime.now().toIso8601String().split("T").first,
@@ -1520,7 +1626,256 @@ Widget _buildViewAssessmentButton(String title) {
   // ===========================================================
   // VIEW MARKS PAGE
   // ===========================================================
+Widget _buildStudentViewMarksPage(BuildContext context) {
+  return Scaffold(
+    backgroundColor: const Color(0xffF5F7FB),
 
+    appBar: AppBar(
+      backgroundColor: MarksScreen.primaryBlue,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      centerTitle: true,
+
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () {
+          Navigator.pop(context);
+        },
+      ),
+
+      title: const Text(
+        "My Marks",
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ),
+
+    body: SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            const Text(
+              "My Marks",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            const Text(
+              "Select an assessment to view your marks.",
+              style: TextStyle(
+                fontSize: 15,
+                color: Colors.grey,
+              ),
+            ),
+
+            const SizedBox(height: 25),
+
+            // =================================================
+            // ASSESSMENT CATEGORY
+            // =================================================
+
+            _buildDropdownField(
+  label: "Assessment Category",
+  hint: "Select Category",
+  value: selectedViewCategory,
+  items: assessmentCategories,
+  onChanged: (value) {
+    setState(() {
+      selectedViewCategory = value!;
+
+      viewMarks = [];
+      marksLoaded = false;
+
+      if (selectedViewCategory == "Extracurricular") {
+        selectedAssessment = "Monthly Test";
+        selectedMonth = null;
+      }
+    });
+  },
+),
+
+            // =================================================
+            // ACADEMIC ASSESSMENT TYPE
+            // =================================================
+
+            if (selectedViewCategory == "Academic") ...[
+              const SizedBox(height: 20),
+
+              const Text(
+                "Assessment Type",
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _buildViewAssessmentButton("Monthly Test"),
+                  _buildViewAssessmentButton("Quarterly"),
+                  _buildViewAssessmentButton("Half Yearly"),
+                  _buildViewAssessmentButton("Annual"),
+                ],
+              ),
+            ],
+
+            // =================================================
+            // MONTH
+            // =================================================
+
+            if (selectedViewCategory == "Academic" &&
+                selectedAssessment == "Monthly Test") ...[
+              const SizedBox(height: 15),
+
+              _buildDropdownField(
+                label: "Month",
+                hint: "Select Month",
+                value: selectedMonth,
+                items: months,
+                onChanged: (value) {
+                  setState(() {
+                    selectedMonth = value;
+                    viewMarks = [];
+                    marksLoaded = false;
+                  });
+                },
+              ),
+            ],
+
+            const SizedBox(height: 25),
+
+            // =================================================
+            // VIEW MY MARKS
+            // =================================================
+
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+
+              child: ElevatedButton.icon(
+                onPressed: isLoadingMarks
+                    ? null
+                    : _loadMarks,
+
+                icon: isLoadingMarks
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.visibility_outlined,
+                      ),
+
+                label: Text(
+                  isLoadingMarks
+                      ? "Loading Marks..."
+                      : "View My Marks",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      MarksScreen.primaryBlue,
+                  foregroundColor: Colors.white,
+
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 25),
+
+            // =================================================
+            // MARKS RESULT
+            // =================================================
+
+            if (viewMarks.isNotEmpty)
+              _buildMarksResult(),
+
+            // =================================================
+            // NO DATA
+            // =================================================
+
+            if (marksLoaded && viewMarks.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(25),
+
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius:
+                      BorderRadius.circular(14),
+                  border: Border.all(
+                    color: Colors.grey.shade200,
+                  ),
+                ),
+
+                child: const Column(
+                  children: [
+
+                    Icon(
+                      Icons.assignment_outlined,
+                      size: 45,
+                      color: Colors.grey,
+                    ),
+
+                    SizedBox(height: 12),
+
+                    Text(
+                      "No marks found",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    SizedBox(height: 5),
+
+                    Text(
+                      "No marks have been recorded for this assessment.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            const SizedBox(height: 30),
+          ],
+        ),
+      ),
+    ),
+  );
+}
   // ===========================================================
 // VIEW MARKS PAGE
 // ===========================================================
