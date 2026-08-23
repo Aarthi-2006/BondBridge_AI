@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, session
 from database import get_connection
 from datetime import datetime
 
@@ -38,7 +38,7 @@ def add_homework():
             title,
             description,
             assigned_date,
-            due_date,
+            due_date
         )
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
@@ -89,13 +89,6 @@ def add_homework():
 
         if conn:
             conn.close()
-
-
-
-# =====================================
-# GET SUBMISSIONS
-# =====================================
-
 # =====================================
 # GET HOMEWORK
 # =====================================
@@ -149,13 +142,44 @@ def get_homework():
         # HOMEWORK FILTER
         # =====================================
 
-        query = """
-        SELECT *
-        FROM homework
-        WHERE 1=1
-        """
+        if student_id:
 
-        params = []
+            query = """
+            SELECT
+                h.*,
+                COALESCE(hs.status, 'Not Completed') AS completion_status,
+                hs.submitted_at
+            FROM homework h
+            LEFT JOIN homework_submissions hs
+                ON h.homework_id = hs.homework_id
+                AND hs.student_id = %s
+            WHERE 1=1
+            """
+
+            params = [student_id]
+
+        else:
+
+            query = """
+            SELECT
+                h.*,
+                (
+                    SELECT COUNT(*)
+                    FROM students s
+                    WHERE s.class = h.class
+                    AND s.section = h.section
+                ) AS total_students,
+                (
+                    SELECT COUNT(*)
+                    FROM homework_submissions hs
+                    WHERE hs.homework_id = h.homework_id
+                    AND hs.status = 'Completed'
+                ) AS completed_students
+            FROM homework h
+            WHERE 1=1
+            """
+
+            params = []
 
         # Class filter
         if class_name:
@@ -189,6 +213,157 @@ def get_homework():
         })
 
     except Exception as e:
+
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+    finally:
+
+        if cursor:
+            cursor.close()
+
+        if conn:
+            conn.close()
+# =====================================
+# MARK HOMEWORK AS COMPLETED
+# =====================================
+
+@homework.route("/homework/<int:homework_id>/complete", methods=["POST"])
+def complete_homework(homework_id):
+
+    conn = None
+    cursor = None
+
+    try:
+
+        # =====================================
+        # VERIFY STUDENT
+        # =====================================
+
+        data = request.get_json() or {}
+
+        role = data.get("role")
+        student_id = data.get("student_id")
+
+        if not student_id:
+
+            return jsonify({
+                "success": False,
+                "message": "Student information not found"
+            }), 403
+
+        if not role or role.lower() != "student":
+
+            return jsonify({
+                "success": False,
+                "message": "Only students can complete homework"
+            }), 403
+
+        # =====================================
+        # DATABASE CONNECTION
+        # =====================================
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # =====================================
+        # VERIFY HOMEWORK EXISTS
+        # =====================================
+
+        cursor.execute(
+            """
+            SELECT homework_id
+            FROM homework
+            WHERE homework_id=%s
+            """,
+            (homework_id,)
+        )
+
+        homework_record = cursor.fetchone()
+
+        if not homework_record:
+
+            return jsonify({
+                "success": False,
+                "message": "Homework not found"
+            }), 404
+
+        # =====================================
+        # CHECK EXISTING SUBMISSION
+        # =====================================
+
+        cursor.execute(
+            """
+            SELECT submission_id, status
+            FROM homework_submissions
+            WHERE homework_id=%s
+            AND student_id=%s
+            """,
+            (homework_id, student_id)
+        )
+
+        submission = cursor.fetchone()
+
+        # =====================================
+        # ALREADY COMPLETED
+        # =====================================
+
+        if submission and submission["status"] == "Completed":
+
+            return jsonify({
+                "success": True,
+                "message": "Homework already completed"
+            }), 200
+
+        # =====================================
+        # CREATE OR UPDATE COMPLETION
+        # =====================================
+
+        if submission:
+
+            cursor.execute(
+                """
+                UPDATE homework_submissions
+                SET status='Completed',
+                    submitted_at=NOW()
+                WHERE submission_id=%s
+                """,
+                (submission["submission_id"],)
+            )
+
+        else:
+
+            cursor.execute(
+                """
+                INSERT INTO homework_submissions
+                (
+                    homework_id,
+                    student_id,
+                    status,
+                    submitted_at
+                )
+                VALUES (%s, %s, 'Completed', NOW())
+                """,
+                (homework_id, student_id)
+            )
+
+        # =====================================
+        # COMMIT
+        # =====================================
+
+        conn.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Homework marked as completed"
+        }), 200
+
+    except Exception as e:
+
+        if conn:
+            conn.rollback()
 
         return jsonify({
             "success": False,

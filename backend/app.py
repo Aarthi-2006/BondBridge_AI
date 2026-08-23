@@ -1,4 +1,5 @@
 from flask import Flask
+import os
 from routes.auth import auth
 from routes.students import students
 from routes.teachers import teachers
@@ -11,6 +12,10 @@ from routes.marks import marks_bp
 from routes.ai_reports import ai_reports_bp
 
 app = Flask(__name__)
+app.secret_key = os.environ.get(
+    "FLASK_SECRET_KEY",
+    "bondbridge-ai-development-secret-key"
+)
 
 app.register_blueprint(auth)
 app.register_blueprint(students)

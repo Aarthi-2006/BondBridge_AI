@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from database import get_connection
 
 auth = Blueprint("auth", __name__)
@@ -59,6 +59,18 @@ def login():
 
         if user:
 
+            # Store authenticated user identity in Flask session
+            session["user_id"] = user["user_id"]
+            session["role"] = user["role"]
+
+            if user["student_id"] is not None:
+                session["student_id"] = user["student_id"]
+
+            elif user["parent_student_id"] is not None:
+                session["student_id"] = user["parent_student_id"]
+            if user["parent_id"] is not None:
+                session["parent_id"] = user["parent_id"]
+
             return jsonify({
 
                 "success": True,
@@ -70,8 +82,6 @@ def login():
                 "user": user
 
             })
-
-
         return jsonify({
 
             "success": False,

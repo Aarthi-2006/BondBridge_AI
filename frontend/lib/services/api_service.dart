@@ -1500,6 +1500,51 @@ static Future<List<dynamic>> getHomework({
 
   return [];
 }
+// ==========================================
+// COMPLETE HOMEWORK
+// ==========================================
+
+
+static Future<Map<String, dynamic>> completeHomework(
+  int homeworkId,
+) async {
+
+  try {
+
+    if (Session.studentId == null) {
+      return {
+        "success": false,
+        "message": "Student information not found",
+      };
+    }
+
+    final response = await http.post(
+      Uri.parse(
+        "$baseUrl/homework/$homeworkId/complete",
+      ),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "student_id": Session.studentId,
+           "role": Session.role,
+
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+
+    return data;
+
+  } catch (e) {
+
+    return {
+      "success": false,
+      "message": "Unable to connect to server",
+    };
+
+  }
+}
 // ======================================
 // GET STUDENT CLASS TEACHER
 // ======================================

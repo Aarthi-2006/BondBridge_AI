@@ -178,10 +178,6 @@ Future<void> loadHomework() async {
 // PARENT
 // ==========================================
 
-// ==========================================
-// PARENT
-// ==========================================
-
 else if (Session.role?.toLowerCase() == "parent") {
 
   if (Session.studentId == null) {
@@ -193,10 +189,9 @@ else if (Session.role?.toLowerCase() == "parent") {
   }
 
   data = await ApiService.getHomework(
-    studentId: Session.studentId,
+    studentId: Session.studentId!,
   );
 }
-
     // ==========================================
     // TEACHER
     // ==========================================
@@ -666,88 +661,238 @@ else
   shape: RoundedRectangleBorder(
     borderRadius: BorderRadius.circular(16),
   ),
-  child: ListTile(
-  contentPadding: const EdgeInsets.all(16),
-
-  title: Text(
-    homework["title"]?.toString() ?? "",
-    style: const TextStyle(
-      fontSize: 18,
-      fontWeight: FontWeight.bold,
-    ),
-  ),
-
-  subtitle: Padding(
-    padding: const EdgeInsets.only(top: 10),
+  child: Padding(
+    padding: const EdgeInsets.all(16),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+
+        // ==========================================
+        // HOMEWORK TITLE
+        // ==========================================
+
+        Text(
+          homework["title"]?.toString() ?? "",
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        // ==========================================
+        // SUBJECT
+        // ==========================================
+
         Text(
           "Subject: ${homework["subject"] ?? ""}",
         ),
 
         const SizedBox(height: 4),
 
+        // ==========================================
+        // CLASS & SECTION
+        // ==========================================
+
         Text(
           "Class: ${homework["class"] ?? ""} - "
           "${homework["section"] ?? ""}",
         ),
 
-        const SizedBox(height: 4),
+        // ==========================================
+        // TEACHER COMPLETION COUNT
+        // ==========================================
 
-        Row(
-  children: [
-    const Icon(
-      Icons.calendar_today,
-      size: 18,
-    ),
-    const SizedBox(width: 8),
-    Text(
-      "Assigned: ${homework["assigned_date"] ?? ""}",
-    ),
-  ],
-),
+        if (Session.role?.toLowerCase() == "teacher") ...[
+          const SizedBox(height: 6),
 
-const SizedBox(height: 6),
-
-Row(
-  children: [
-    const Icon(
-      Icons.event,
-      size: 18,
-    ),
-    const SizedBox(width: 8),
-    Text(
-      "Due: ${homework["due_date"] ?? ""}",
-      style: const TextStyle(
-        fontWeight: FontWeight.w600,
-      ),
-    ),
-  ],
-),
+          Text(
+            "Completed: "
+            "${homework["completed_students"] ?? 0} / "
+            "${homework["total_students"] ?? 0} students",
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.green,
+            ),
+          ),
+        ],
 
         const SizedBox(height: 8),
 
-Container(
-  width: double.infinity,
-  padding: const EdgeInsets.all(12),
-  decoration: BoxDecoration(
-    color: Colors.grey.shade100,
-    borderRadius: BorderRadius.circular(10),
-  ),
-  child: Text(
-    homework["description"]?.toString() ?? "",
-    style: const TextStyle(
-      fontSize: 15,
-      height: 1.4,
+        // ==========================================
+        // ASSIGNED DATE
+        // ==========================================
+
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.calendar_today,
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                "Assigned: ${homework["assigned_date"] ?? ""}",
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 6),
+
+        // ==========================================
+        // DUE DATE
+        // ==========================================
+
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.event,
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                "Due: ${homework["due_date"] ?? ""}",
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 10),
+
+        // ==========================================
+        // DESCRIPTION
+        // ==========================================
+
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            homework["description"]?.toString() ?? "",
+            style: const TextStyle(
+              fontSize: 15,
+              height: 1.4,
+            ),
+          ),
+        ),
+
+        // ==========================================
+// STUDENT / PARENT COMPLETION STATUS
+// ==========================================
+
+if (Session.role?.toLowerCase() == "student" ||
+    Session.role?.toLowerCase() == "parent") ...[
+  const SizedBox(height: 12),
+
+  if (homework["completion_status"]
+          ?.toString()
+          .toLowerCase() ==
+      "completed")
+
+    // COMPLETED
+    Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        vertical: 12,
+        horizontal: 16,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: Colors.green.shade300,
+        ),
+      ),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.check_circle,
+            color: Colors.green,
+            size: 22,
+          ),
+          SizedBox(width: 8),
+          Text(
+            "Completed",
+            style: TextStyle(
+              color: Colors.green,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+          ),
+        ],
+      ),
+    )
+
+  // STUDENT ONLY → MARK AS COMPLETED
+  else if (Session.role?.toLowerCase() == "student")
+    SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () async {
+          final homeworkId = homework["homework_id"];
+
+          if (homeworkId == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Homework ID not found"),
+              ),
+            );
+            return;
+          }
+
+          final response =
+              await ApiService.completeHomework(
+            int.parse(homeworkId.toString()),
+          );
+
+          if (!context.mounted) return;
+
+          if (response["success"] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  "Homework marked as completed",
+                ),
+              ),
+            );
+
+            await loadHomework();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  response["message"] ??
+                      "Failed to mark homework as completed",
+                ),
+              ),
+            );
+          }
+        },
+        icon: const Icon(
+          Icons.check_circle_outline,
+        ),
+        label: const Text(
+          "Mark as Completed",
+        ),
+      ),
     ),
-  ),
-),
+],
       ],
     ),
   ),
-),
-      );
+);
     },
   ),
     ],
