@@ -9,7 +9,7 @@ import 'marks_screen.dart';
 import 'homework_screen.dart';
 import 'announcement_management/announcement_management_screen.dart';
 import 'teacher_profile_screen.dart';
-
+import 'ai_reports_screen.dart';
 class TeacherDashboard extends StatefulWidget {
   final String teacherName;
   final String teacherEmail;
@@ -343,14 +343,13 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                   iconColor: Colors.deepPurple,
 
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "AI Report screen will be connected here.",
-                        ),
-                      ),
-                    );
-                  },
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const AIReportsScreen(),
+    ),
+  );
+},
                 ),
               ],
             ),
@@ -638,16 +637,15 @@ class TeacherDrawer extends StatelessWidget {
                   ),
 
                   onTap: () {
-                    Navigator.pop(context);
+  Navigator.pop(context);
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "AI Report screen will be connected here.",
-                        ),
-                      ),
-                    );
-                  },
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const AIReportsScreen(),
+    ),
+  );
+},
                 ),
               ],
             ),

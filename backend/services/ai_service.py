@@ -1,40 +1,27 @@
-# backend/services/ai_service.py
+import requests
 
-# ==========================================
-# AI SERVICE
-# ==========================================
 
-def generate_ai_report(
-    attendance_percentage,
-    average_marks,
-    homework_completion,
-    strengths=None,
-    improvement_areas=None
-):
+OLLAMA_URL = "http://localhost:11434/api/generate"
+OLLAMA_MODEL = "gemma3:4b"
+
+
+def generate_ai_response(prompt):
     """
-    Generate AI-based student progress report.
-
-    Gemini integration will be added in Module 1 - Step 5.
+    Send a prompt to Ollama and return the generated AI response.
     """
 
-    # ------------------------------------------
-    # Prepare student performance data
-    # ------------------------------------------
+    response = requests.post(
+        OLLAMA_URL,
+        json={
+            "model": OLLAMA_MODEL,
+            "prompt": prompt,
+            "stream": False
+        },
+        timeout=300
+    )
 
-    student_data = {
-        "attendance_percentage": attendance_percentage,
-        "average_marks": average_marks,
-        "homework_completion": homework_completion,
-        "strengths": strengths,
-        "improvement_areas": improvement_areas
-    }
+    response.raise_for_status()
 
-    # ------------------------------------------
-    # AI generation will be connected later
-    # ------------------------------------------
+    data = response.json()
 
-    return {
-        "success": False,
-        "message": "AI service is prepared. Gemini integration is not configured yet.",
-        "data": student_data
-    }
+    return data.get("response", "").strip()

@@ -7,6 +7,7 @@ import 'marks_screen.dart';
 import 'login_screen.dart';
 import 'announcement_management/announcement_management_screen.dart';
 import 'parent_profile_screen.dart';
+import 'ai_reports_screen.dart';
 
 class ParentDashboard extends StatefulWidget {
   const ParentDashboard({super.key});
@@ -368,10 +369,15 @@ if (value == "logout") {
                       Colors.deepPurple,
 
                   onTap: () {
-
-                    // AI module will be connected later.
-
-                  },
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const AIReportsScreen(
+        mode: AIReportsMode.parent,
+      ),
+    ),
+  );
+},
                 ),
 
                 // =================================================
@@ -663,10 +669,17 @@ class ParentDrawer extends StatelessWidget {
                   ),
 
                   onTap: () {
+  Navigator.pop(context);
 
-                    // AI module will be connected later.
-
-                  },
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const AIReportsScreen(
+        mode: AIReportsMode.parent,
+      ),
+    ),
+  );
+},
                 ),
               ],
             ),

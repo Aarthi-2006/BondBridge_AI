@@ -1577,4 +1577,155 @@ static Future<String?> getStudentClassTeacher({
     return null;
   }
 }
+// ======================================
+// GENERATE AI REPORT
+// ======================================
+
+static Future<Map<String, dynamic>> generateAIReport({
+  required int studentId,
+  required String month,
+}) async {
+  try {
+    final response = await http.post(
+      Uri.parse("$baseUrl/ai-reports/generate"),
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: jsonEncode({
+        "student_id": studentId,
+        "month": month,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+
+    return data;
+  } catch (e) {
+    return {
+      "success": false,
+      "message": "Unable to connect to server",
+    };
+  }
+}
+// =========================================================
+// GET SAVED AI REPORTS FOR STUDENT
+// =========================================================
+
+static Future<Map<String, dynamic>> getStudentAIReports({
+  required int studentId,
+}) async {
+  try {
+    final response = await http.get(
+      Uri.parse(
+        "$baseUrl/ai-reports/student-reports?student_id=$studentId",
+      ),
+    );
+
+    return jsonDecode(response.body);
+  } catch (e) {
+    return {
+      "success": false,
+      "message": e.toString(),
+    };
+  }
+}
+// ======================================
+// GET PENDING AI REPORTS FOR TEACHER
+// ======================================
+
+static Future<List<dynamic>> getPendingAIReports({
+  required int teacherId,
+}) async {
+  try {
+    final response = await http.get(
+      Uri.parse(
+        "$baseUrl/ai-reports/pending?teacher_id=$teacherId",
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      if (data["success"] == true &&
+          data["reports"] is List) {
+        return data["reports"];
+      }
+    }
+
+    return [];
+  } catch (e) {
+    return [];
+  }
+}
+
+
+// ======================================
+// APPROVE AI REPORT
+// ======================================
+
+// ======================================
+// APPROVE AI REPORT
+// ======================================
+
+static Future<Map<String, dynamic>> approveAIReport({
+  required int reportId,
+  required int teacherId,
+}) async {
+  try {
+    final response = await http.put(
+      Uri.parse(
+        "$baseUrl/ai-reports/$reportId/approve",
+      ),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "teacher_id": teacherId,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+
+    return data;
+  } catch (e) {
+    return {
+      "success": false,
+      "message": "Unable to connect to server",
+    };
+  }
+}
+// =========================================================
+// GET VERIFIED AI REPORTS FOR STUDENT
+// =========================================================
+
+static Future<Map<String, dynamic>>
+    getStudentVerifiedAIReports({
+  required int studentId,
+}) async {
+  try {
+    final response = await http.get(
+      Uri.parse(
+        "$baseUrl/ai-reports/student-verified-reports"
+        "?student_id=$studentId",
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    return {
+      "success": false,
+      "message":
+          "Failed to load verified AI reports",
+    };
+  } catch (e) {
+    return {
+      "success": false,
+      "message": e.toString(),
+    };
+  }
+}
 }

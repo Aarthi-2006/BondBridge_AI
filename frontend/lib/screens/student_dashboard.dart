@@ -6,6 +6,7 @@ import 'login_screen.dart';
 import 'marks_screen.dart';
 import 'homework_screen.dart';
 import 'announcement_management/announcement_management_screen.dart';
+import 'ai_reports_screen.dart';
 
 // Use your existing Student Profile screen here.
 // Change the import/class name only if your actual file is named differently.
@@ -354,23 +355,30 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 // =================================================
 
                 DashboardCard(
-                  title: "AI Fields",
+  title: "AI Reports",
 
-                  icon: Icons.auto_awesome,
+  icon: Icons.auto_awesome,
 
-                  backgroundColor:
-                      const Color(0xffF3E8FF),
+  backgroundColor:
+      const Color(0xffF3E8FF),
 
-                  iconBackgroundColor:
-                      const Color(0xffDEC7FF),
+  iconBackgroundColor:
+      const Color(0xffDEC7FF),
 
-                  iconColor:
-                      Colors.deepPurple,
+  iconColor:
+      Colors.deepPurple,
 
-                 onTap: () {
-  // AI module will be connected later.
-},
-                ),
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AIReportsScreen(
+          mode: AIReportsMode.student,
+        ),
+      ),
+    );
+  },
+),
 
                 // =================================================
                 // EMPTY SIXTH CARD
@@ -636,23 +644,32 @@ class StudentDrawer extends StatelessWidget {
                 // ==================================================
 
                 ListTile(
-                  leading: const Icon(
-                    Icons.auto_awesome,
-                    color: Color(0xff444444),
-                  ),
+  leading: const Icon(
+    Icons.auto_awesome,
+    color: Color(0xff444444),
+  ),
 
-                  title: const Text(
-                    "AI Fiels",
+  title: const Text(
+    "AI Reports",
 
-                    style: TextStyle(
-                      fontSize: 15,
-                    ),
-                  ),
+    style: TextStyle(
+      fontSize: 15,
+    ),
+  ),
 
-                  onTap: () {
-  // AI module will be connected later.
-},
-                ),
+  onTap: () {
+    Navigator.pop(context);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AIReportsScreen(
+          mode: AIReportsMode.student,
+        ),
+      ),
+    );
+  },
+),
               ],
             ),
           ),

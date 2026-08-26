@@ -10,6 +10,7 @@ from routes.announcements import announcements
 from routes.class_teacher import class_teacher
 from routes.marks import marks_bp
 from routes.ai_reports import ai_reports_bp
+from routes.ai_test import ai_test
 
 app = Flask(__name__)
 app.secret_key = os.environ.get(
@@ -25,6 +26,7 @@ app.register_blueprint(attendance)
 app.register_blueprint(marks_bp)
 app.register_blueprint(homework)
 app.register_blueprint(ai_reports_bp)
+app.register_blueprint(ai_test)
 app.register_blueprint(announcements)
 app.register_blueprint(class_teacher)
 
