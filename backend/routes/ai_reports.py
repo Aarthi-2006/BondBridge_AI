@@ -1093,10 +1093,144 @@ def get_pending_ai_reports():
 
         if conn:
             conn.close()
+# =========================================================
+# GENERATE CELEBRATION SUGGESTION
+# =========================================================
+
+def generate_celebration_suggestion(
+    report,
+    student_name
+):
+
+    prompt = f"""
+You are an AI family engagement assistant for a school.
+
+A student's monthly AI progress report has been verified
+by the teacher.
+
+Your task is to suggest ONE positive and practical
+family celebration or quality-time activity for the parent.
+
+Student Name:
+{student_name}
+
+Attendance Percentage:
+{report["attendance_percentage"]}%
+
+Average Marks:
+{report["average_marks"]}%
+
+Homework Completion:
+{report["homework_completion"]}%
+
+Strengths:
+{report["strengths"]}
+
+Improvement Areas:
+{report["improvement_areas"]}
+
+AI Suggestions:
+{report["ai_suggestions"]}
+
+Important instructions:
+
+- Suggest ONE celebration or positive family activity.
+- The celebration should be appropriate for a school student.
+- Keep it affordable and practical.
+- The activity can be a family outing, quality-time activity,
+  hobby activity, small reward, game, meal, movie night,
+  reading activity, or similar positive experience.
+- Base the suggestion only on the verified report.
+- Do not invent achievements.
+- Do not claim that the student achieved something that is
+  not present in the report.
+- Do not use expensive rewards.
+- Do not suggest harmful or inappropriate activities.
+- Keep the suggestion warm, positive and encouraging.
+- The suggestion should be easy for a parent to understand.
+- Return ONLY the celebration suggestion text.
+- Do not use markdown.
+- Do not use JSON.
+- Do not add headings.
+
+Example style:
+
+"Celebrate your child's consistent effort this month with
+a special family movie night and let your child choose
+the movie as a small recognition of their hard work."
+"""
+
+    celebration_text = generate_ai_response(prompt)
+
+    if not celebration_text:
+        return None
+
+    return celebration_text.strip()
 
 
 # =========================================================
-# APPROVE AI REPORT
+# GENERATE CELEBRATION FOR VERIFIED AI REPORT
+# =========================================================
+
+def generate_celebration_for_report(
+    report_id,
+    student_id,
+    student_name,
+    report_month,
+    strengths,
+    improvement_areas,
+    ai_suggestions
+):
+
+    prompt = f"""
+You are an AI family engagement assistant for a school.
+
+Create one positive and meaningful celebration suggestion
+for a parent based on the student's verified monthly AI report.
+
+Student Name: {student_name}
+Report Month: {report_month}
+
+Strengths:
+{strengths}
+
+Improvement Areas:
+{improvement_areas}
+
+AI Suggestions:
+{ai_suggestions}
+
+Your task:
+Suggest ONE simple, positive family celebration or quality-time
+activity that a parent can do with the student to appreciate
+the student's effort, progress, achievement, or participation.
+
+The celebration must:
+- Be positive and encouraging.
+- Be suitable for a school student.
+- Be practical for a parent to do.
+- Focus on appreciation rather than expensive rewards.
+- Be based only on the provided report information.
+- Not invent achievements.
+- Not mention private or sensitive information.
+- Be concise.
+- Return ONLY the celebration text.
+- Do not use JSON.
+- Do not use markdown.
+"""
+
+    celebration = generate_ai_response(prompt)
+
+    if not celebration:
+        return None
+
+    celebration = celebration.strip()
+
+    return celebration
+
+# =========================================================
+# APPROVE / VERIFY AI REPORT
+# AND AUTOMATICALLY GENERATE CELEBRATION
 # =========================================================
 
 @ai_reports_bp.route(
@@ -1138,7 +1272,17 @@ def approve_ai_report(report_id):
             SELECT
                 ar.report_id,
                 ar.student_id,
+                ar.report_month,
+                ar.attendance_percentage,
+                ar.average_marks,
+                ar.homework_completion,
+                ar.strengths,
+                ar.improvement_areas,
+                ar.ai_suggestions,
                 ar.status,
+
+                u.full_name AS student_name,
+
                 s.class,
                 s.section
 
@@ -1146,6 +1290,9 @@ def approve_ai_report(report_id):
 
             JOIN students s
                 ON ar.student_id = s.student_id
+
+            JOIN users u
+                ON s.user_id = u.user_id
 
             JOIN class_teacher_assignment cta
                 ON cta.class = s.class
@@ -1168,7 +1315,7 @@ def approve_ai_report(report_id):
             }), 404
 
         # =====================================================
-        # CHECK STATUS
+        # CHECK REPORT STATUS
         # =====================================================
 
         if report["status"] != "Pending":
@@ -1180,12 +1327,8 @@ def approve_ai_report(report_id):
             }), 400
 
         # =====================================================
-        # APPROVE REPORT
+        # VERIFY REPORT
         # =====================================================
-
-        # =========================================================
-# APPROVE / VERIFY REPORT
-# =========================================================
 
         cursor.execute(
             """
@@ -1199,14 +1342,107 @@ def approve_ai_report(report_id):
             (teacher_id, report_id)
         )
 
+        # =====================================================
+        # GENERATE CELEBRATION
+        # =====================================================
+
+        celebration_text = generate_celebration_suggestion(
+            report,
+            report["student_name"]
+        )
+
+        if not celebration_text:
+
+            conn.rollback()
+
+            return jsonify({
+                "success": False,
+                "message":
+                    "Report could not be verified because "
+                    "celebration generation failed"
+            }), 500
+
+        # =====================================================
+        # CHECK WHETHER CELEBRATION ALREADY EXISTS
+        # =====================================================
+
+        cursor.execute(
+            """
+            SELECT
+                celebration_id
+            FROM celebrations
+            WHERE report_id = %s
+            """,
+            (report_id,)
+        )
+
+        existing_celebration = cursor.fetchone()
+
+        # =====================================================
+        # SAVE CELEBRATION
+        # =====================================================
+
+        if not existing_celebration:
+
+            cursor.execute(
+                """
+                INSERT INTO celebrations (
+                    report_id,
+                    student_id,
+                    celebration_text
+                )
+                VALUES (
+                    %s,
+                    %s,
+                    %s
+                )
+                """,
+                (
+                    report_id,
+                    report["student_id"],
+                    celebration_text
+                )
+            )
+
+            celebration_id = cursor.lastrowid
+
+        else:
+
+            celebration_id = existing_celebration[
+                "celebration_id"
+            ]
+
+        # =====================================================
+        # COMMIT EVERYTHING
+        # =====================================================
+
         conn.commit()
 
+        # =====================================================
+        # RESPONSE
+        # =====================================================
+
         return jsonify({
+
             "success": True,
-            "message": "AI report verified successfully",
-            "report_id": report_id,
-            "status": "Verified"
+
+            "message":
+                "AI report verified and celebration generated successfully",
+
+            "report_id":
+                report_id,
+
+            "status":
+                "Verified",
+
+            "celebration_id":
+                celebration_id,
+
+            "celebration_text":
+                celebration_text
+
         }), 200
+
     except Exception as e:
 
         if conn:
@@ -1227,3 +1463,179 @@ def approve_ai_report(report_id):
 
         if conn:
             conn.close()
+# =========================================================
+# GET VERIFIED AI REPORTS FOR PARENT'S CHILD
+# =========================================================
+
+@ai_reports_bp.route("/ai-reports/parent-reports", methods=["GET"])
+def get_parent_ai_reports():
+
+    parent_id = request.args.get("parent_id")
+
+    if not parent_id:
+        return jsonify({
+            "success": False,
+            "message": "parent_id is required"
+        }), 400
+
+    conn = None
+    cursor = None
+
+    try:
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # =====================================================
+        # GET PARENT'S CHILD
+        # =====================================================
+
+        cursor.execute(
+            """
+            SELECT
+                p.parent_id,
+                s.student_id,
+                u.full_name AS student_name,
+                s.class,
+                s.section,
+                s.roll_no
+            FROM parents p
+
+            INNER JOIN students s
+                ON p.student_id = s.student_id
+
+            INNER JOIN users u
+                ON s.user_id = u.user_id
+
+            WHERE p.parent_id = %s
+            """,
+            (parent_id,)
+        )
+
+        child = cursor.fetchone()
+
+        if not child:
+
+            return jsonify({
+                "success": False,
+                "message": "Child not found for this parent"
+            }), 404
+
+        # =====================================================
+        # GET VERIFIED REPORTS ONLY
+        # =====================================================
+
+        cursor.execute(
+            """
+            SELECT
+                ar.report_id,
+                ar.student_id,
+                ar.report_month,
+                ar.attendance_percentage,
+                ar.average_marks,
+                ar.homework_completion,
+                ar.strengths,
+                ar.improvement_areas,
+                ar.ai_suggestions,
+                ar.generated_at,
+                ar.status,
+                ar.reviewed_by,
+                ar.reviewed_at,
+                c.celebration_id,
+                c.celebration_text
+
+            FROM ai_reports ar
+            LEFT JOIN celebrations c
+                ON ar.report_id = c.report_id
+
+            WHERE ar.student_id = %s
+            AND ar.status = 'Verified'
+
+            ORDER BY
+                report_month DESC,
+                generated_at DESC
+            """,
+            (child["student_id"],)
+        )
+
+        reports = cursor.fetchall()
+
+        # =====================================================
+        # RESPONSE
+        # =====================================================
+
+        return jsonify({
+
+            "success": True,
+
+            "child": child,
+
+            "reports": reports,
+
+            "count": len(reports)
+
+        }), 200
+
+    except Exception as e:
+
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+    finally:
+
+        if cursor:
+            cursor.close()
+
+        if conn:
+            conn.close()
+# =========================================================
+# STUDENT ASK AI
+# =========================================================
+
+@ai_reports_bp.route("/ask", methods=["POST"])
+def ask_ai():
+
+    try:
+
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "success": False,
+                "message": "No request data received"
+            }), 400
+
+        question = data.get("question", "").strip()
+
+        if not question:
+            return jsonify({
+                "success": False,
+                "message": "Question is required"
+            }), 400
+
+        prompt = f"""
+You are an academic AI assistant for students.
+
+Answer the student's question clearly and accurately.
+
+Student question:
+{question}
+
+Give a simple educational explanation suitable for a student.
+"""
+
+        answer = generate_ai_response(prompt)
+
+        return jsonify({
+            "success": True,
+            "answer": answer
+        }), 200
+
+    except Exception as e:
+
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500

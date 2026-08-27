@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'session.dart';
-
+import 'package:flutter/material.dart';
 class ApiService {
 
   // Emulator -> Flask
@@ -1726,6 +1726,92 @@ static Future<Map<String, dynamic>>
       "success": false,
       "message": e.toString(),
     };
+  }
+}
+// =========================================================
+// GET VERIFIED AI REPORTS FOR PARENT'S CHILD
+// =========================================================
+
+static Future<Map<String, dynamic>> getParentAIReports({
+  required int parentId,
+}) async {
+  try {
+    final response = await http.get(
+      Uri.parse(
+        "$baseUrl/ai-reports/parent-reports"
+        "?parent_id=$parentId",
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    return {
+      "success": false,
+      "message": "Failed to load parent AI reports",
+      "reports": [],
+    };
+  } catch (e) {
+    return {
+      "success": false,
+      "message": e.toString(),
+      "reports": [],
+    };
+  }
+}
+
+// =========================================================
+// STUDENT ASK AI
+// =========================================================
+
+static Future<Map<String, dynamic>> askAI({
+  required String question,
+}) async {
+
+  try {
+
+    final response = await http.post(
+      Uri.parse("$baseUrl/ai/ask"),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "question": question,
+      }),
+    );
+
+    debugPrint(
+      "Ask AI Status: ${response.statusCode}",
+    );
+
+    debugPrint(
+      "Ask AI Response: ${response.body}",
+    );
+
+    if (response.statusCode != 200) {
+
+      throw Exception(
+        "AI service returned status ${response.statusCode}: "
+        "${response.body}",
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception(
+        "Invalid response received from AI service",
+      );
+    }
+
+    return decoded;
+
+  } catch (e) {
+
+    throw Exception(
+      "Unable to connect to AI service: $e",
+    );
   }
 }
 }
