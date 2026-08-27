@@ -1323,11 +1323,16 @@ Widget _buildVerifiedReportCard(dynamic report) {
   final suggestions =
       report["ai_suggestions"]?.toString() ??
       "No information available.";
-  final celebration =
+
+  debugPrint("🔥 VERIFIED REPORT DATA: $report");
+  debugPrint("🎉 CELEBRATION TEXT: ${report["celebration_text"]}");
+
+final celebration =
+    report["celebration_text"]?.toString() ??
+    report["family_celebration"]?.toString() ??
     report["celebration"]?.toString() ??
     report["celebration_suggestion"]?.toString() ??
     "No celebration suggestion available.";
-
   return Card(
     elevation: 3,
     margin: const EdgeInsets.only(bottom: 18),
@@ -1812,10 +1817,11 @@ Future<void> _askAIQuestion() async {
     // =====================================================
     // CALL FLASK → OLLAMA
     // =====================================================
-
+    debugPrint("🚀 ASK AI BUTTON CLICKED");
     final result = await ApiService.askAI(
       question: question,
     );
+    debugPrint("✅ ASK AI RESPONSE RECEIVED");
 
     if (!mounted) return;
 
@@ -1828,7 +1834,7 @@ Future<void> _askAIQuestion() async {
       setState(() {
 
         aiAnswer =
-            result["answer"]?.toString() ??
+            result["response"]?.toString() ??
             "No answer received from AI.";
 
       });

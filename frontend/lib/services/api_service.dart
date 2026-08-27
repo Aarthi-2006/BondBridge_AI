@@ -1772,7 +1772,7 @@ static Future<Map<String, dynamic>> askAI({
   try {
 
     final response = await http.post(
-      Uri.parse("$baseUrl/ai/ask"),
+      Uri.parse("$baseUrl/ask-ai"),
       headers: {
         "Content-Type": "application/json",
       },
@@ -1812,6 +1812,38 @@ static Future<Map<String, dynamic>> askAI({
     throw Exception(
       "Unable to connect to AI service: $e",
     );
+  }
+}
+// =========================================================
+// GET FAMILY CELEBRATIONS FOR PARENT
+// =========================================================
+
+static Future<Map<String, dynamic>> getParentCelebrations({
+  required int parentId,
+}) async {
+  try {
+    final response = await http.get(
+      Uri.parse(
+        "$baseUrl/ai-reports/parent-celebrations"
+        "?parent_id=$parentId",
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    return {
+      "success": false,
+      "message": "Failed to load family celebrations",
+      "celebrations": [],
+    };
+  } catch (e) {
+    return {
+      "success": false,
+      "message": e.toString(),
+      "celebrations": [],
+    };
   }
 }
 }

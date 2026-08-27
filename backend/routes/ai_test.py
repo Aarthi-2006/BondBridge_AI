@@ -28,8 +28,12 @@ def test_ollama():
 @ai_test.route("/ask-ai", methods=["POST"])
 def ask_ai():
 
+    print("🚀 ASK AI REQUEST RECEIVED")
+
     try:
         data = request.get_json()
+
+        print("📥 DATA:", data)
 
         question = data.get("question", "").strip()
 
@@ -39,7 +43,12 @@ def ask_ai():
                 "message": "Question is required"
             }), 400
 
+        print("❓ QUESTION:", question)
+        print("🤖 Calling Ollama...")
+
         response = generate_ai_response(question)
+
+        print("✅ AI RESPONSE RECEIVED")
 
         return jsonify({
             "success": True,
@@ -47,6 +56,8 @@ def ask_ai():
         }), 200
 
     except Exception as e:
+
+        print("❌ AI ERROR:", e)
 
         return jsonify({
             "success": False,

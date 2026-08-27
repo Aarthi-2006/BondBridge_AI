@@ -86,7 +86,7 @@ def get_student_report_data():
                 level
             FROM marks
             WHERE student_id = %s
-            AND DATE_FORMAT(assessment_date, '%%Y-%%m') = %s
+            AND DATE_FORMAT(assessment_date, '%Y-%m') = %s
             ORDER BY assessment_date
             """,
             (student_id, month)
@@ -110,7 +110,7 @@ def get_student_report_data():
             FROM marks
             WHERE student_id = %s
             AND assessment_category = 'Extracurricular'
-            AND DATE_FORMAT(assessment_date, '%%Y-%%m') = %s
+            AND DATE_FORMAT(assessment_date, '%Y-%m') = %s
             ORDER BY assessment_date
             """,
             (student_id, month)
@@ -129,7 +129,7 @@ def get_student_report_data():
                 status
             FROM attendance
             WHERE student_id = %s
-            AND DATE_FORMAT(attendance_date, '%%Y-%%m') = %s
+            AND DATE_FORMAT(attendance_date, '%Y-%m') = %s
             ORDER BY attendance_date
             """,
             (student_id, month)
@@ -155,7 +155,7 @@ def get_student_report_data():
             JOIN homework h
                 ON hs.homework_id = h.homework_id
             WHERE hs.student_id = %s
-            AND DATE_FORMAT(h.assigned_date, '%%Y-%%m') = %s
+            AND DATE_FORMAT(h.assigned_date, '%Y-%m') = %s
             ORDER BY h.assigned_date
             """,
             (student_id, month)
@@ -405,7 +405,7 @@ def generate_student_ai_report():
                 level
             FROM marks
             WHERE student_id = %s
-            AND DATE_FORMAT(assessment_date, '%%Y-%%m') = %s
+            AND DATE_FORMAT(assessment_date, '%Y-%m') = %s
             ORDER BY assessment_date
             """,
             (student_id, month)
@@ -429,7 +429,7 @@ def generate_student_ai_report():
             FROM marks
             WHERE student_id = %s
             AND assessment_category = 'Extracurricular'
-            AND DATE_FORMAT(assessment_date, '%%Y-%%m') = %s
+            AND DATE_FORMAT(assessment_date, '%Y-%m') = %s
             ORDER BY assessment_date
             """,
             (student_id, month)
@@ -448,7 +448,7 @@ def generate_student_ai_report():
                 status
             FROM attendance
             WHERE student_id = %s
-            AND DATE_FORMAT(attendance_date, '%%Y-%%m') = %s
+            AND DATE_FORMAT(attendance_date, '%Y-%m') = %s
             ORDER BY attendance_date
             """,
             (student_id, month)
@@ -474,7 +474,7 @@ def generate_student_ai_report():
             JOIN homework h
                 ON hs.homework_id = h.homework_id
             WHERE hs.student_id = %s
-            AND DATE_FORMAT(h.assigned_date, '%%Y-%%m') = %s
+            AND DATE_FORMAT(h.assigned_date, '%Y-%m') = %s
             ORDER BY h.assigned_date
             """,
             (student_id, month)
@@ -1094,70 +1094,213 @@ def get_pending_ai_reports():
         if conn:
             conn.close()
 # =========================================================
-# GENERATE CELEBRATION SUGGESTION
+# GENERATE FAMILY CELEBRATION SUGGESTION
 # =========================================================
 
 def generate_celebration_suggestion(
     report,
-    student_name
+    student_name,
+    previous_report=None
 ):
 
+    current_marks = (
+        float(report["average_marks"])
+        if report["average_marks"] is not None
+        else None
+    )
+
+    current_attendance = (
+        float(report["attendance_percentage"])
+        if report["attendance_percentage"] is not None
+        else None
+    )
+
+    current_homework = (
+        float(report["homework_completion"])
+        if report["homework_completion"] is not None
+        else None
+    )
+
+    previous_marks = None
+    previous_attendance = None
+    previous_homework = None
+
+    if previous_report:
+
+        if previous_report["average_marks"] is not None:
+            previous_marks = float(
+                previous_report["average_marks"]
+            )
+
+        if previous_report["attendance_percentage"] is not None:
+            previous_attendance = float(
+                previous_report["attendance_percentage"]
+            )
+
+        if previous_report["homework_completion"] is not None:
+            previous_homework = float(
+                previous_report["homework_completion"]
+            )
+
+    # =====================================================
+    # CALCULATE CHANGES
+    # =====================================================
+
+    changes = []
+
+    if current_marks is not None and previous_marks is not None:
+        changes.append(
+            current_marks - previous_marks
+        )
+
+    if current_attendance is not None and previous_attendance is not None:
+        changes.append(
+            current_attendance - previous_attendance
+        )
+
+    if current_homework is not None and previous_homework is not None:
+        changes.append(
+            current_homework - previous_homework
+        )
+
+    positive_changes = [
+        change for change in changes
+        if change > 0
+    ]
+
+    if positive_changes:
+        overall_change = max(positive_changes)
+    else:
+        overall_change = 0
+
+    # =====================================================
+    # CELEBRATION LEVEL
+    # =====================================================
+
+    if overall_change >= 15:
+        celebration_level = "Huge Improvement"
+
+    elif overall_change >= 5:
+        celebration_level = "Good Improvement"
+
+    elif overall_change > 0:
+        celebration_level = "Small Improvement"
+
+    else:
+        celebration_level = "Encouragement"
+
+    # =====================================================
+    # BUILD FAMILY-FOCUSED PROMPT
+    # =====================================================
+
     prompt = f"""
-You are an AI family engagement assistant for a school.
+You are a family engagement assistant for a school.
 
-A student's monthly AI progress report has been verified
-by the teacher.
+Your ONLY task is to create ONE family celebration or
+quality-time activity for a parent and child.
 
-Your task is to suggest ONE positive and practical
-family celebration or quality-time activity for the parent.
+This is NOT a student progress suggestion.
+Do NOT give academic advice.
+Do NOT repeat teacher recommendations.
 
 Student Name:
 {student_name}
 
-Attendance Percentage:
-{report["attendance_percentage"]}%
+Report Month:
+{report["report_month"]}
 
-Average Marks:
-{report["average_marks"]}%
+Current Average Marks:
+{current_marks if current_marks is not None else "No data available"}%
 
-Homework Completion:
-{report["homework_completion"]}%
+Current Attendance:
+{current_attendance if current_attendance is not None else "No data available"}%
 
-Strengths:
+Current Homework Completion:
+{current_homework if current_homework is not None else "No data available"}%
+
+Previous Average Marks:
+{previous_marks if previous_marks is not None else "No previous report available"}%
+
+Previous Attendance:
+{previous_attendance if previous_attendance is not None else "No previous report available"}%
+
+Previous Homework Completion:
+{previous_homework if previous_homework is not None else "No previous report available"}%
+
+Overall Positive Change:
+{round(overall_change, 2)} percentage points
+
+Celebration Level:
+{celebration_level}
+
+Student Strengths:
 {report["strengths"]}
 
 Improvement Areas:
 {report["improvement_areas"]}
 
-AI Suggestions:
-{report["ai_suggestions"]}
+=========================================================
+FAMILY CELEBRATION RULES
+=========================================================
 
-Important instructions:
+1. Return ONE family-oriented activity only.
 
-- Suggest ONE celebration or positive family activity.
-- The celebration should be appropriate for a school student.
-- Keep it affordable and practical.
-- The activity can be a family outing, quality-time activity,
-  hobby activity, small reward, game, meal, movie night,
-  reading activity, or similar positive experience.
-- Base the suggestion only on the verified report.
-- Do not invent achievements.
-- Do not claim that the student achieved something that is
-  not present in the report.
-- Do not use expensive rewards.
-- Do not suggest harmful or inappropriate activities.
-- Keep the suggestion warm, positive and encouraging.
-- The suggestion should be easy for a parent to understand.
-- Return ONLY the celebration suggestion text.
-- Do not use markdown.
-- Do not use JSON.
-- Do not add headings.
+2. The activity must involve the parent/family and child
+   spending positive quality time together.
 
-Example style:
+3. Do NOT provide academic advice.
 
-"Celebrate your child's consistent effort this month with
-a special family movie night and let your child choose
-the movie as a small recognition of their hard work."
+4. Do NOT repeat or rewrite the AI Suggestions.
+
+5. Do NOT mention "AI Suggestions".
+
+6. Do NOT tell the parent to study, practice, revise,
+   complete homework, improve marks, or attend school.
+
+7. Do NOT invent achievements.
+
+8. The celebration must be affordable and practical.
+
+9. Examples include:
+   - family movie night
+   - favorite home-cooked meal
+   - board game together
+   - short family outing
+   - cooking together
+   - playing the child's favorite game
+   - reading together
+   - outdoor walk or activity
+   - small treat
+   - family conversation
+   - hobby activity together
+
+10. If there is a large improvement, make the celebration
+    feel more special.
+
+11. If there is a small improvement, suggest a simple
+    celebration.
+
+12. If there is no measurable improvement, still provide
+    a small encouragement activity.
+
+13. If there is no previous report, do not claim improvement.
+    Simply suggest a positive family activity based on the
+    student's available strengths or participation.
+
+14. The result must sound like a recommendation directly
+    to the parent.
+
+15. Keep it concise: one or two sentences.
+
+16. Return ONLY the celebration text.
+
+17. Do not use JSON.
+
+18. Do not use markdown.
+
+19. Do not add a heading.
+
+20. Do not include academic recommendations.
 """
 
     celebration_text = generate_ai_response(prompt)
@@ -1166,67 +1309,6 @@ the movie as a small recognition of their hard work."
         return None
 
     return celebration_text.strip()
-
-
-# =========================================================
-# GENERATE CELEBRATION FOR VERIFIED AI REPORT
-# =========================================================
-
-def generate_celebration_for_report(
-    report_id,
-    student_id,
-    student_name,
-    report_month,
-    strengths,
-    improvement_areas,
-    ai_suggestions
-):
-
-    prompt = f"""
-You are an AI family engagement assistant for a school.
-
-Create one positive and meaningful celebration suggestion
-for a parent based on the student's verified monthly AI report.
-
-Student Name: {student_name}
-Report Month: {report_month}
-
-Strengths:
-{strengths}
-
-Improvement Areas:
-{improvement_areas}
-
-AI Suggestions:
-{ai_suggestions}
-
-Your task:
-Suggest ONE simple, positive family celebration or quality-time
-activity that a parent can do with the student to appreciate
-the student's effort, progress, achievement, or participation.
-
-The celebration must:
-- Be positive and encouraging.
-- Be suitable for a school student.
-- Be practical for a parent to do.
-- Focus on appreciation rather than expensive rewards.
-- Be based only on the provided report information.
-- Not invent achievements.
-- Not mention private or sensitive information.
-- Be concise.
-- Return ONLY the celebration text.
-- Do not use JSON.
-- Do not use markdown.
-"""
-
-    celebration = generate_ai_response(prompt)
-
-    if not celebration:
-        return None
-
-    celebration = celebration.strip()
-
-    return celebration
 
 # =========================================================
 # APPROVE / VERIFY AI REPORT
@@ -1343,25 +1425,53 @@ def approve_ai_report(report_id):
         )
 
         # =====================================================
-        # GENERATE CELEBRATION
-        # =====================================================
+# GET PREVIOUS VERIFIED REPORT
+# =====================================================
+
+        cursor.execute(
+            """
+            SELECT
+                report_id,
+                report_month,
+                attendance_percentage,
+                average_marks,
+                homework_completion
+            FROM ai_reports
+            WHERE student_id = %s
+            AND status = 'Verified'
+            AND report_month < %s
+            ORDER BY report_month DESC
+            LIMIT 1
+            """,
+            (
+                report["student_id"],
+                report["report_month"]
+            )
+        )
+
+        previous_report = cursor.fetchone()
+
+
+# =====================================================
+# GENERATE CELEBRATION
+# =====================================================
 
         celebration_text = generate_celebration_suggestion(
             report,
-            report["student_name"]
+            report["student_name"],
+            previous_report
         )
+        # =====================================================
+# FALLBACK CELEBRATION
+# =====================================================
 
         if not celebration_text:
-
-            conn.rollback()
-
-            return jsonify({
-                "success": False,
-                "message":
-                    "Report could not be verified because "
-                    "celebration generation failed"
-            }), 500
-
+            celebration_text = (
+                f"Celebrate {report['student_name']}'s journey this month "
+                "with a small family quality-time activity. Spend some "
+                "time together doing something your child enjoys and "
+                "encourage them to keep learning and making progress."
+            )
         # =====================================================
         # CHECK WHETHER CELEBRATION ALREADY EXISTS
         # =====================================================
@@ -1370,7 +1480,7 @@ def approve_ai_report(report_id):
             """
             SELECT
                 celebration_id
-            FROM celebrations
+            FROM ai_celebrations
             WHERE report_id = %s
             """,
             (report_id,)
@@ -1386,7 +1496,7 @@ def approve_ai_report(report_id):
 
             cursor.execute(
                 """
-                INSERT INTO celebrations (
+                INSERT INTO ai_celebrations (
                     report_id,
                     student_id,
                     celebration_text
@@ -1545,7 +1655,7 @@ def get_parent_ai_reports():
                 c.celebration_text
 
             FROM ai_reports ar
-            LEFT JOIN celebrations c
+            LEFT JOIN ai_celebrations c
                 ON ar.report_id = c.report_id
 
             WHERE ar.student_id = %s
@@ -1639,3 +1749,122 @@ Give a simple educational explanation suitable for a student.
             "success": False,
             "message": str(e)
         }), 500
+# =========================================================
+# GET FAMILY CELEBRATIONS FOR PARENT
+# =========================================================
+
+@ai_reports_bp.route("/ai-reports/parent-celebrations", methods=["GET"])
+def get_parent_celebrations():
+
+    parent_id = request.args.get("parent_id")
+
+    if not parent_id:
+        return jsonify({
+            "success": False,
+            "message": "parent_id is required"
+        }), 400
+
+    conn = None
+    cursor = None
+
+    try:
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # =====================================================
+        # GET PARENT'S CHILD
+        # =====================================================
+
+        cursor.execute(
+            """
+            SELECT
+                p.parent_id,
+                s.student_id,
+                u.full_name AS student_name
+            FROM parents p
+
+            INNER JOIN students s
+                ON p.student_id = s.student_id
+
+            INNER JOIN users u
+                ON s.user_id = u.user_id
+
+            WHERE p.parent_id = %s
+            """,
+            (parent_id,)
+        )
+
+        child = cursor.fetchone()
+
+        if not child:
+
+            return jsonify({
+                "success": False,
+                "message": "Child not found for this parent"
+            }), 404
+
+        # =====================================================
+        # GET FAMILY CELEBRATIONS
+        # =====================================================
+
+        cursor.execute(
+            """
+            SELECT
+                c.celebration_id,
+                c.report_id,
+                c.student_id,
+                c.celebration_text,
+                ar.report_month,
+                ar.generated_at
+
+            FROM ai_celebrations c
+
+            INNER JOIN ai_reports ar
+                ON c.report_id = ar.report_id
+
+            WHERE c.student_id = %s
+            AND ar.status = 'Verified'
+
+            ORDER BY
+                ar.report_month DESC,
+                c.celebration_id DESC
+            """,
+            (child["student_id"],)
+        )
+
+        celebrations = cursor.fetchall()
+
+        # =====================================================
+        # RESPONSE
+        # =====================================================
+
+        return jsonify({
+
+            "success": True,
+
+            "child": child,
+
+            "celebrations": celebrations,
+
+            "count": len(celebrations)
+
+        }), 200
+
+    except Exception as e:
+
+        return jsonify({
+
+            "success": False,
+
+            "message": str(e)
+
+        }), 500
+
+    finally:
+
+        if cursor:
+            cursor.close()
+
+        if conn:
+            conn.close()
