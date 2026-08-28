@@ -183,6 +183,58 @@ content:Text(
 
 
 }
+String _formatAttendanceDate(String date) {
+  try {
+    // Handle: 2026-08-21
+    final isoMatch = RegExp(
+      r'^(\d{4})-(\d{2})-(\d{2})',
+    ).firstMatch(date);
+
+    if (isoMatch != null) {
+      final year = int.parse(isoMatch.group(1)!);
+      final month = int.parse(isoMatch.group(2)!);
+      final day = int.parse(isoMatch.group(3)!);
+
+      return "${day.toString().padLeft(2, '0')}-"
+          "${month.toString().padLeft(2, '0')}-$year";
+    }
+
+    // Handle: Fri, 21 Aug 2026 00:00:00 GMT
+    final httpMatch = RegExp(
+      r'^[A-Za-z]{3},\s+(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})',
+    ).firstMatch(date);
+
+    if (httpMatch != null) {
+      final day = int.parse(httpMatch.group(1)!);
+      final year = int.parse(httpMatch.group(3)!);
+
+      const monthNumbers = {
+        "Jan": 1,
+        "Feb": 2,
+        "Mar": 3,
+        "Apr": 4,
+        "May": 5,
+        "Jun": 6,
+        "Jul": 7,
+        "Aug": 8,
+        "Sep": 9,
+        "Oct": 10,
+        "Nov": 11,
+        "Dec": 12,
+      };
+
+      final month =
+          monthNumbers[httpMatch.group(2)!] ?? 1;
+
+      return "${day.toString().padLeft(2, '0')}-"
+          "${month.toString().padLeft(2, '0')}-$year";
+    }
+
+    return date;
+  } catch (e) {
+    return date;
+  }
+}
 Future<void> loadStudentAttendance() async {
   if (Session.studentId == null) return;
 
@@ -1311,15 +1363,7 @@ else
           final rawDate =
               attendance["attendance_date"]?.toString() ?? "";
 
-          String date = rawDate;
-
-          if (rawDate.isNotEmpty && rawDate.contains("-")) {
-            final parts = rawDate.split("-");
-
-            if (parts.length == 3) {
-              date = "${parts[2]}-${parts[1]}-${parts[0]}";
-            }
-          }
+         final date = _formatAttendanceDate(rawDate);
 
           return Card(
             child: ListTile(

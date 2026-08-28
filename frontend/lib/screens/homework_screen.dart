@@ -232,6 +232,22 @@ else if (Session.role?.toLowerCase() == "parent") {
     );
   }
 }
+String formatDate(dynamic date) {
+  if (date == null) return "";
+
+  final dateString = date.toString();
+
+  // Remove time part such as 00:00:00 GMT
+  if (dateString.contains(" ")) {
+    return dateString.split(" ").first;
+  }
+
+  if (dateString.contains("T")) {
+    return dateString.split("T").first;
+  }
+
+  return dateString;
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -734,7 +750,7 @@ else
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                "Assigned: ${homework["assigned_date"] ?? ""}",
+                "Assigned: ${formatDate(homework["assigned_date"])}",
               ),
             ),
           ],
@@ -756,7 +772,7 @@ else
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                "Due: ${homework["due_date"] ?? ""}",
+                "Due: ${formatDate(homework["due_date"])}",
                 style: const TextStyle(
                   fontWeight: FontWeight.w600,
                 ),

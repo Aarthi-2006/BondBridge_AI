@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
 import '../services/session.dart';
 import 'attendance_screen.dart';
 import 'homework_screen.dart';
@@ -16,15 +15,11 @@ class ParentDashboard extends StatefulWidget {
   State<ParentDashboard> createState() => _ParentDashboardState();
 }
 class _ParentDashboardState extends State<ParentDashboard> {
-  List<dynamic> familyCelebrations = [];
-  bool isLoadingCelebrations = false;
 
   @override
-  void initState() {
-    super.initState();
-
-    _loadFamilyCelebrations();
-  }
+void initState() {
+  super.initState();
+}
 
   @override
   Widget build(BuildContext context) {
@@ -397,105 +392,6 @@ if (value == "logout") {
               ],
             ),
                         const SizedBox(height: 24),
-
-            // =====================================================
-            // FAMILY CELEBRATION
-            // =====================================================
-
-            const Text(
-              "Family Celebration",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xff1F4FB8),
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            if (isLoadingCelebrations)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            else if (familyCelebrations.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: const Color(0xffFFF8E1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Text(
-                  "No family celebration available yet.",
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.black87,
-                  ),
-                ),
-              )
-            else
-              Column(
-                children: familyCelebrations.map((celebration) {
-                  return Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: const Color(0xffFFF8E1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.orange.shade200,
-                      ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.celebration,
-                          color: Colors.orange,
-                          size: 30,
-                        ),
-
-                        const SizedBox(width: 12),
-
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                celebration["report_month"]
-                                        ?.toString() ??
-                                    "",
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xff1F4FB8),
-                                ),
-                              ),
-
-                              const SizedBox(height: 6),
-
-                              Text(
-                                celebration["celebration_text"]
-                                        ?.toString() ??
-                                    "",
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
           ],
         ),
       ),
@@ -519,32 +415,7 @@ if (value == "logout") {
       (route) => false,
     );
   }
-  Future<void> _loadFamilyCelebrations() async {
-  if (Session.parentId == null) {
-    return;
-  }
-
-  setState(() {
-    isLoadingCelebrations = true;
-  });
-
-  final data = await ApiService.getParentCelebrations(
-    parentId: Session.parentId!,
-  );
-
-  if (!mounted) return;
-
-  setState(() {
-    if (data["success"] == true &&
-        data["celebrations"] is List) {
-      familyCelebrations = data["celebrations"];
-    } else {
-      familyCelebrations = [];
-    }
-
-    isLoadingCelebrations = false;
-  });
-}
+ 
 }
 
 

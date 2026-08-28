@@ -70,6 +70,12 @@ bool isLoadingVerifiedReports = false;
 
 int? parentChildStudentId;
 String? parentChildName;
+// =========================================================
+// FAMILY CELEBRATIONS
+// =========================================================
+
+List<dynamic> familyCelebrations = [];
+bool isLoadingCelebrations = false;
 @override
 void dispose() {
   _askAIController.dispose();
@@ -92,10 +98,9 @@ void initState() {
   } else if (widget.mode == AIReportsMode.parent) {
 
   _loadParentChild();
+  _loadParentCelebrations();
 
-
-
-  }
+}
 }
 
   // =========================================================
@@ -348,6 +353,58 @@ await _loadVerifiedReports();
         ),
         backgroundColor: Colors.red,
       ),
+    );
+  }
+}
+// =========================================================
+// LOAD PARENT FAMILY CELEBRATIONS
+// =========================================================
+
+Future<void> _loadParentCelebrations() async {
+
+  if (Session.parentId == null) {
+    return;
+  }
+
+  setState(() {
+    isLoadingCelebrations = true;
+  });
+
+  try {
+
+    final data = await ApiService.getParentCelebrations(
+      parentId: Session.parentId!,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+
+      if (data["success"] == true &&
+          data["celebrations"] is List) {
+
+        familyCelebrations = data["celebrations"];
+
+      } else {
+
+        familyCelebrations = [];
+
+      }
+
+      isLoadingCelebrations = false;
+    });
+
+  } catch (e) {
+
+    if (!mounted) return;
+
+    setState(() {
+      familyCelebrations = [];
+      isLoadingCelebrations = false;
+    });
+
+    debugPrint(
+      "Error loading family celebrations: $e",
     );
   }
 }
@@ -658,9 +715,7 @@ final month =
       );
             await _loadPendingAIReports();
 
-      // TODO:
-      // Next step will display the generated report
-      // inside this screen.
+      
 
     } else {
 
@@ -749,7 +804,7 @@ Future<void> _approveAIReport() async {
         reportApproved = true;
       });
         await _loadPendingAIReports();
-
+           if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -786,13 +841,12 @@ Future<void> _approveAIReport() async {
     );
 
   } finally {
-
-    if (!mounted) return;
-
+  if (mounted) {
     setState(() {
       isApprovingReport = false;
     });
   }
+}
 }
 // =========================================================
 // CHECK EXISTING AI REPORT
@@ -1287,6 +1341,31 @@ Future<bool> _checkExistingReport(String month) async {
     );
   }
   // =========================================================
+// GET FAMILY CELEBRATION FOR REPORT MONTH
+// =========================================================
+
+String? _getCelebrationForMonth(String reportMonth) {
+
+  for (final celebration in familyCelebrations) {
+
+    if (celebration is! Map) {
+      continue;
+    }
+
+    final celebrationMonth =
+        celebration["report_month"]?.toString();
+
+    if (celebrationMonth == reportMonth) {
+
+      return celebration["celebration_text"]
+          ?.toString();
+
+    }
+  }
+
+  return null;
+}
+  // =========================================================
 // VERIFIED REPORT CARD
 // =========================================================
 
@@ -1324,15 +1403,12 @@ Widget _buildVerifiedReportCard(dynamic report) {
       report["ai_suggestions"]?.toString() ??
       "No information available.";
 
-  debugPrint("🔥 VERIFIED REPORT DATA: $report");
-  debugPrint("🎉 CELEBRATION TEXT: ${report["celebration_text"]}");
+ final celebration =
+    _getCelebrationForMonth(reportMonth);
 
-final celebration =
-    report["celebration_text"]?.toString() ??
-    report["family_celebration"]?.toString() ??
-    report["celebration"]?.toString() ??
-    report["celebration_suggestion"]?.toString() ??
-    "No celebration suggestion available.";
+debugPrint(
+  "🎉 FAMILY CELEBRATION FOR $reportMonth: $celebration",
+);
   return Card(
     elevation: 3,
     margin: const EdgeInsets.only(bottom: 18),
@@ -1530,55 +1606,68 @@ final celebration =
               fontSize: 15,
             ),
           ),
-          const SizedBox(height: 20),
-
-// =================================================
+          // =================================================
 // FAMILY CELEBRATION
 // =================================================
 
-const Text(
-  "Family Celebration",
-  style: TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.bold,
-  ),
-),
+if (celebration != null &&
+    celebration.trim().isNotEmpty) ...[
 
-const SizedBox(height: 8),
+  const SizedBox(height: 20),
 
-Container(
-  width: double.infinity,
-  padding: const EdgeInsets.all(16),
-  decoration: BoxDecoration(
-    color: Colors.orange.shade50,
-    borderRadius: BorderRadius.circular(12),
-    border: Border.all(
-      color: Colors.orange.shade200,
+  const Text(
+    "Family Celebration",
+    style: TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.bold,
     ),
   ),
-  child: Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Icon(
-        Icons.celebration,
-        color: Colors.orange,
-        size: 28,
+
+  const SizedBox(height: 8),
+
+  Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+
+    decoration: BoxDecoration(
+      color: Colors.orange.shade50,
+
+      borderRadius:
+          BorderRadius.circular(12),
+
+      border: Border.all(
+        color: Colors.orange.shade200,
       ),
+    ),
 
-      const SizedBox(width: 12),
+    child: Row(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
 
-      Expanded(
-        child: Text(
-          celebration,
-          style: const TextStyle(
-            fontSize: 15,
-            height: 1.5,
+      children: [
+
+        const Icon(
+          Icons.celebration,
+          color: Colors.orange,
+          size: 28,
+        ),
+
+        const SizedBox(width: 12),
+
+        Expanded(
+          child: Text(
+            celebration,
+
+            style: const TextStyle(
+              fontSize: 15,
+              height: 1.5,
+            ),
           ),
         ),
-      ),
-    ],
+      ],
+    ),
   ),
-),
+],
         ],
       ),
     ),
@@ -1866,13 +1955,12 @@ Future<void> _askAIQuestion() async {
     );
 
   } finally {
-
-    if (!mounted) return;
-
+  if (mounted) {
     setState(() {
-      isAskingAI = false;
+      isApprovingReport = false;
     });
   }
+}
 }
 // =========================================================
 // STUDENT ASK AI
@@ -2376,7 +2464,10 @@ if (widget.mode == AIReportsMode.parent) {
     ),
 
     body: RefreshIndicator(
-      onRefresh: _loadVerifiedReports,
+  onRefresh: () async {
+    await _loadVerifiedReports();
+    await _loadParentCelebrations();
+  },
 
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),

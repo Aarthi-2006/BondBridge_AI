@@ -154,6 +154,11 @@ final List<String> levels = [
     "Social Science",
   ];
 }
+// ===========================================================
+// VIEW MARKS SUBJECTS
+// ===========================================================
+
+
 
   // ===========================================================
   // MARK CONTROLLERS
@@ -190,16 +195,38 @@ Future<void> _loadActualStudentId() async {
     }
 
     final student = result.firstWhere(
-      (item) => item["user_id"].toString() == Session.userId.toString(),
+      (item) =>
+          item["user_id"].toString() ==
+          Session.userId.toString(),
       orElse: () => null,
     );
 
     if (student != null) {
+      final studentId =
+          int.tryParse(student["student_id"].toString());
+
+      final studentClass =
+          student["class"]?.toString() ??
+          student["class_name"]?.toString() ??
+          "";
+
+      final studentSection =
+          student["section"]?.toString() ??
+          "";
+
+      if (!mounted) return;
+
       setState(() {
-        actualStudentId =
-            int.tryParse(student["student_id"].toString());
+        actualStudentId = studentId;
+        selectedClass =
+            studentClass.isNotEmpty ? studentClass : null;
+        selectedSection =
+            studentSection.isNotEmpty ? studentSection : null;
       });
+
       debugPrint("Actual Student ID: $actualStudentId");
+      debugPrint("Student Class: $selectedClass");
+      debugPrint("Student Section: $selectedSection");
     }
   } catch (e) {
     debugPrint("Error loading student ID: $e");
@@ -3199,7 +3226,29 @@ Widget _buildMarksResult() {
           } else {
             performance = "Needs Improvement";
           }
+          final subjectOrder = [
+  "Tamil",
+  "English",
+  "Maths",
+  "Physics",
+  "Chemistry",
+  "Biology",
+];
 
+final sortedSubjects = marksBySubject.keys.toList()
+  ..sort((a, b) {
+    final indexA = subjectOrder.indexOf(a);
+    final indexB = subjectOrder.indexOf(b);
+
+    if (indexA != -1 && indexB != -1) {
+      return indexA.compareTo(indexB);
+    }
+
+    if (indexA != -1) return -1;
+    if (indexB != -1) return 1;
+
+    return a.compareTo(b);
+  });
           // ===================================================
           // STUDENT CARD
           // ===================================================
@@ -3309,17 +3358,16 @@ else
                   // SUBJECT MARKS
                   // =========================================
 
-                  ...subjects.map(
-                    (subject) {
-                      final mark =
-                          marksBySubject[subject];
+...sortedSubjects.map(
+  (subject) {
+    final mark = marksBySubject[subject];
 
-                      return _buildViewSubjectCard(
-                        subject: subject,
-                        mark: mark,
-                      );
-                    },
-                  ),
+    return _buildViewSubjectCard(
+      subject: subject,
+      mark: mark,
+    );
+  },
+),
 
                   const SizedBox(height: 8),
 
