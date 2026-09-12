@@ -53,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
         isLoading = false;
       });
 
-      if (result["message"] == "Login successful") {
+      if (result["success"] == true && result["user"] != null) {
       Session.userId = result["user"]["user_id"];
 
 Session.parentId = result["user"]["parent_id"];
