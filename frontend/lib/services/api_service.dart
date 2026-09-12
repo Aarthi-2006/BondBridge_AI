@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 class ApiService {
 
   // Emulator -> Flask
-  static const String baseUrl = "http://10.0.2.2:5000";
+  static const String baseUrl = 'https://bondbridge-ai.onrender.com';
 
 
   // ==========================
