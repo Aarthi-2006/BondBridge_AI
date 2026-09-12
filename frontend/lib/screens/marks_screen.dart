@@ -172,11 +172,11 @@ void initState() {
 
   _loadAssignedClasses();
 
-  if (Session.role == "Parent") {
-    _loadParentChildren();
-  } else if (Session.role == "Student") {
-    _loadActualStudentId();
-  }
+  if (Session.role?.toLowerCase() == "parent") {
+  _loadParentChildren();
+} else if (Session.role?.toLowerCase() == "student") {
+  _loadActualStudentId();
+}
 }
 void _initializeMarkControllers() {
   for (final subject in subjects) {
