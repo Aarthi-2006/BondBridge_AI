@@ -195,11 +195,11 @@ Future<void> _loadActualStudentId() async {
     }
 
     final student = result.firstWhere(
-      (item) =>
-          item["user_id"].toString() ==
-          Session.userId.toString(),
-      orElse: () => null,
-    );
+  (item) =>
+      item["email"]?.toString().toLowerCase() ==
+      Session.email?.toString().toLowerCase(),
+  orElse: () => null,
+);
 
     if (student != null) {
       final studentId =
