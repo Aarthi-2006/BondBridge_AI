@@ -225,11 +225,16 @@ Session.fullName =
 
               const SizedBox(height: 25),
 
-              Container(
+              Center(
+  child: ConstrainedBox(
+    constraints: const BoxConstraints(
+      maxWidth: 700,
+    ),
+    child: Container(
 
-                padding: const EdgeInsets.all(25),
+      padding: const EdgeInsets.all(25),
 
-                decoration: BoxDecoration(
+      decoration: BoxDecoration(
 
                   color: Colors.white,
 
@@ -567,7 +572,9 @@ const SizedBox(height: 30),
 ),
                  ], // Column children
                 ), // Column
-              ), // Container
+              ),
+   ),
+               ), // Container
             ], // Outer Column children
           ), // Outer Column
         ), // SingleChildScrollView
