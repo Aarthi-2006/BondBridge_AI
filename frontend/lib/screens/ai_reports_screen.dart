@@ -1957,7 +1957,7 @@ Future<void> _askAIQuestion() async {
   } finally {
   if (mounted) {
     setState(() {
-      isApprovingReport = false;
+      isAskingAI = false;
     });
   }
 }
