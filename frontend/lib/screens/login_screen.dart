@@ -404,6 +404,8 @@ Row(
   mainAxisAlignment: MainAxisAlignment.spaceBetween,
 
   children: [
+    Flexible(
+      child: 
 
     Row(
 
@@ -440,24 +442,6 @@ Row(
       ],
 
     ),
-
-    TextButton(
-
-      onPressed: () {},
-
-      child: Text(
-
-        "Forgot Password?",
-
-        style: GoogleFonts.poppins(
-
-          color: const Color(0xff2F80ED),
-
-          fontWeight: FontWeight.w600,
-
-        ),
-
-      ),
 
     ),
 
